@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>THE LAST FREQUENCY — NIGHT SHIFT (1974)</title>
+  <style>
+    /* =====================================================================
+     * V2.1 DESIGN TOKENS — 1974 WEATHERED ANALOG INSTRUMENTATION PALETTE
+     * ===================================================================== */
+    :root {
+      --bg-void: #101417;
+      --aged-metal: #555D55;
+      --oxidized-green: #414B43;
+      --faded-olive: #72765C;
+      --bakelite-black: #242521;
+      --bakelite-deep: #181916;
+      --old-brass: #A18B62;
+      --yellowed-paper: #D7C8A5;
+      --aged-ivory: #E0D8C1;
+      --dim-amber: #C89049;
+      --phosphor-green: #8BA88A;
+      --rust-brown: #795843;
+      --stamp-red: #8F3A2B;
+      --ink-typewriter: #23211D;
+
+      /* Legacy variable aliases for compatibility */
+      --bg-charcoal: #242521;
+      --amber: #C89049;
+      --phosphor: #8BA88A;
+      --danger: #9E4735;
+      --paper: #E0D8C1;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-void);
+      color: var(--aged-ivory);
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .font-editorial {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+    }
+
+    .font-mono-tech {
+      font-family: 'IBM Plex Mono', monospace;
+    }
+
+    .font-typewriter {
+      font-family: 'Courier Prime', 'IBM Plex Mono', monospace;
+    }
+
+    /* Subtle analog optical vignette & CRT scanline overlay */
+    .analog-overlay {
+      pointer-events: none;
+      background:
+        radial-gradient(circle at 50% 48%, transparent 56%, rgba(10, 12, 10, 0.78) 100%),
+        repeating-linear-gradient(
+          0deg,
+          rgba(224, 216, 193, 0.01) 0px,
+          rgba(224, 216, 193, 0.01) 1px,
+          transparent 1px,
+          transparent 3px
+        );
+    }
+
+    /* Industrial Scrollbars */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1c1e1b;
+      border-left: 1px solid #383e38;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #555D55;
+      border: 1px solid #242521;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--old-brass);
+    }
+
+    /* =====================================================================
+     * WEATHERED METAL CHASSIS & INSTRUMENT PANELS (.panel-hardware, .aged-metal)
+     * ===================================================================== */
+    .panel-hardware,
+    .aged-metal {
+      position: relative;
+      background-color: #2c322d;
+      background-image:
+        /* Corner oxidation & edge wear */
+        radial-gradient(circle at 6% 10%, rgba(121, 88, 67, 0.18) 0%, transparent 28%),
+        radial-gradient(circle at 94% 88%, rgba(65, 75, 67, 0.35) 0%, transparent 36%),
+        /* Brushed horizontal anodized grain */
+        repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.016) 0px,
+          rgba(255, 255, 255, 0.016) 1px,
+          rgba(0, 0, 0, 0.025) 1px,
+          rgba(0, 0, 0, 0.025) 2px
+        ),
+        linear-gradient(165deg, #3c443e 0%, #2a302b 48%, #222622 100%);
+      border: 1px solid #555D55;
+      border-top-color: #6c7369;
+      border-bottom-color: #171916;
+      border-right-color: #1d201c;
+      border-radius: 3px;
+      box-shadow:
+        0 10px 26px rgba(0, 0, 0, 0.78),
+        inset 0 1px 0 rgba(224, 216, 193, 0.16),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.65),
+        inset 0 0 18px rgba(15, 18, 15, 0.55);
+    }
+
+    /* Recessed instrument bezel with chipped paint edge */
+    .vintage-instrument {
+      position: relative;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(200, 144, 73, 0.07), transparent 70%),
+        linear-gradient(180deg, #171916 0%, #20231f 100%);
+      border: 1px solid #121411;
+      border-bottom-color: #4b5249;
+      border-right-color: #414840;
+      border-radius: 2px;
+      box-shadow:
+        inset 0 3px 7px rgba(0, 0, 0, 0.85),
+        inset 0 0 12px rgba(0, 0, 0, 0.65),
+        0 1px 0 rgba(224, 216, 193, 0.08);
+    }
+
+    /* Aged Phosphor / Telemetry Housing (.panel-phosphor) */
+    .panel-phosphor {
+      position: relative;
+      background-color: #1e241f;
+      background-image:
+        radial-gradient(circle at 85% 15%, rgba(121, 88, 67, 0.16) 0%, transparent 32%),
+        repeating-linear-gradient(
+          0deg,
+          rgba(139, 168, 138, 0.018) 0px,
+          rgba(139, 168, 138, 0.018) 1px,
+          transparent 1px,
+          transparent 3px
+        ),
+        linear-gradient(180deg, #283029 0%, #1a201b 100%);
+      border: 1px solid #555D55;
+      border-top-color: #72765C;
+      border-bottom-color: #141714;
+      border-radius: 3px;
+      box-shadow:
+        0 12px 28px rgba(0, 0, 0, 0.82),
+        inset 0 1px 0 rgba(224, 216, 193, 0.14),
+        inset 0 0 22px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Corner Slotted Screws Decoration */
+    .screw-corners {
+      position: relative;
+    }
+    .screw-corners::before,
+    .screw-corners::after {
+      content: '';
+      position: absolute;
+      top: 6px;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background:
+        linear-gradient(135deg, transparent 42%, #181916 43%, #181916 57%, transparent 58%),
+        radial-gradient(circle at 35% 35%, #8b836b 0%, #4d493e 70%, #242521 100%);
+      box-shadow: 0 1px 1px rgba(0,0,0,0.8), inset 0 0 1px rgba(255,255,255,0.25);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .screw-corners::before { left: 6px; }
+    .screw-corners::after { right: 6px; }
+
+    /* Engraved / Silk-Screened Metal Nameplate Text */
+    .engraved-text {
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--aged-ivory);
+      text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85), 0 -1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    /* Worn Dymo / Stencil Equipment Label */
+    .worn-label {
+      display: inline-block;
+      background: linear-gradient(180deg, #20211d 0%, #171815 100%);
+      border: 1px solid #454941;
+      border-top-color: #5a5f54;
+      border-bottom-color: #10110e;
+      color: #d7c8a5;
+      padding: 1px 6px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.65), inset 0 0 4px rgba(0,0,0,0.5);
+    }
+
+    .worn-label-brass {
+      background: linear-gradient(180deg, #8b7752 0%, #635336 100%);
+      border: 1px solid #3d321e;
+      border-top-color: #b59e73;
+      color: #181612;
+      font-weight: 700;
+      text-shadow: 0 1px 0 rgba(255, 235, 190, 0.35);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.7), inset 0 0 6px rgba(36, 30, 18, 0.45);
+    }
+
+    /* =====================================================================
+     * PHYSICAL BAKELITE & METAL SWITCHES (.btn-analog, .bakelite-button)
+     * ===================================================================== */
+    .btn-analog,
+    .bakelite-button {
+      position: relative;
+      background-color: var(--bakelite-black);
+      background-image:
+        /* Subtle worn sheen on top center of keycap */
+        radial-gradient(ellipse at 50% 18%, rgba(224, 216, 193, 0.1) 0%, transparent 60%),
+        linear-gradient(180deg, #32342e 0%, #242521 52%, #191a17 100%);
+      border: 1px solid #121310;
+      border-top-color: #575b51;
+      border-left-color: #43473f;
+      border-radius: 2px;
+      color: var(--aged-ivory);
+      box-shadow:
+        0 3px 0 #10110e,
+        0 4px 6px rgba(0, 0, 0, 0.75),
+        inset 0 1px 0 rgba(224, 216, 193, 0.14);
+      transition: transform 0.08s ease, box-shadow 0.08s ease, border-color 0.12s ease, color 0.12s ease;
+    }
+
+    .btn-analog:hover:not(:disabled) {
+      border-top-color: var(--old-brass);
+      color: #f0e6ce;
+      background-image:
+        radial-gradient(ellipse at 50% 18%, rgba(200, 144, 73, 0.16) 0%, transparent 65%),
+        linear-gradient(180deg, #383b34 0%, #272924 55%, #1c1d19 100%);
+    }
+
+    .btn-analog:active:not(:disabled),
+    .btn-analog.pressed {
+      transform: translateY(2px);
+      box-shadow:
+        0 1px 0 #10110e,
+        0 1px 2px rgba(0, 0, 0, 0.7),
+        inset 0 2px 4px rgba(0, 0, 0, 0.75);
+    }
+
+    .btn-analog:focus-visible {
+      outline: 2px dashed var(--dim-amber);
+      outline-offset: 2px;
+    }
+
+    .btn-analog:disabled {
+      opacity: 0.48;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Active Tungsten Amber State */
+    .btn-analog.active-amber {
+      background-image:
+        radial-gradient(ellipse at 50% 25%, rgba(200, 144, 73, 0.28) 0%, transparent 70%),
+        linear-gradient(180deg, #3d3324 0%, #292319 60%, #1e1912 100%);
+      border-color: #876336;
+      border-top-color: var(--dim-amber);
+      color: #f2CA85;
+      box-shadow:
+        0 2px 0 #10110e,
+        0 0 10px rgba(200, 144, 73, 0.18),
+        inset 0 1px 0 rgba(242, 202, 133, 0.25);
+    }
+
+    /* Active Phosphor Signal State */
+    .btn-analog.active-phosphor {
+      background-image:
+        radial-gradient(ellipse at 50% 25%, rgba(139, 168, 138, 0.25) 0%, transparent 70%),
+        linear-gradient(180deg, #2d382d 0%, #202920 60%, #171e17 100%);
+      border-color: #5b705a;
+      border-top-color: var(--phosphor-green);
+      color: #b8d4b7;
+      box-shadow:
+        0 2px 0 #10110e,
+        0 0 10px rgba(139, 168, 138, 0.16),
+        inset 0 1px 0 rgba(184, 212, 183, 0.22);
+    }
+
+    /* Mechanical Push-Switch Housing (POWER) */
+    .mechanical-switch {
+      border: 1px solid #4d5349;
+      background: linear-gradient(180deg, #1b1d19 0%, #292b26 50%, #161814 100%);
+      box-shadow:
+        0 3px 0 #0d0e0c,
+        0 4px 8px rgba(0,0,0,0.8),
+        inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+
+    /* Physical Jewel Pilot Lamp */
+    .pilot-jewel {
+      position: relative;
+      display: inline-block;
+      border-radius: 50%;
+      border: 1.5px solid #635c4c;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,0.35), 0 1px 2px rgba(0,0,0,0.85);
+      transition: background-color 0.35s ease, box-shadow 0.35s ease;
+    }
+    .pilot-jewel.lamp-off {
+      background: radial-gradient(circle at 35% 35%, #59332a 0%, #2b1612 75%, #170b09 100%);
+      box-shadow: inset 0 1px 2px rgba(255,255,255,0.15), 0 1px 2px rgba(0,0,0,0.9);
+    }
+    .pilot-jewel.lamp-amber {
+      background: radial-gradient(circle at 38% 35%, #fae0a8 0%, #C89049 55%, #6e481b 100%);
+      box-shadow: 0 0 8px rgba(200, 144, 73, 0.65), inset 0 1px 2px rgba(255,255,255,0.6);
+    }
+    .pilot-jewel.lamp-phosphor {
+      background: radial-gradient(circle at 38% 35%, #d9f0d8 0%, #8BA88A 55%, #374d36 100%);
+      box-shadow: 0 0 8px rgba(139, 168, 138, 0.65), inset 0 1px 2px rgba(255,255,255,0.6);
+    }
+
+    /* =====================================================================
+     * ANALOG SLIDE POTENTIOMETER (.retro-slider)
+     * ===================================================================== */
+    input[type="range"].retro-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(215, 200, 165, 0.22) 0px,
+          rgba(215, 200, 165, 0.22) 1px,
+          transparent 1px,
+          transparent 12px
+        ),
+        linear-gradient(180deg, #0e100e 0%, #1d201c 100%);
+      border: 1px solid #454a42;
+      border-top-color: #0b0c0a;
+      border-radius: 1px;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.9);
+      outline: none;
+    }
+    input[type="range"].retro-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 20px;
+      border-radius: 2px;
+      background:
+        linear-gradient(90deg, transparent 44%, #C89049 45%, #C89049 55%, transparent 56%),
+        linear-gradient(180deg, #52574e 0%, #242521 50%, #171815 100%);
+      border: 1px solid #A18B62;
+      border-bottom-color: #121310;
+      cursor: ew-resize;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    input[type="range"].retro-slider::-moz-range-thumb {
+      width: 16px;
+      height: 20px;
+      border-radius: 2px;
+      background:
+        linear-gradient(90deg, transparent 44%, #C89049 45%, #C89049 55%, transparent 56%),
+        linear-gradient(180deg, #52574e 0%, #242521 50%, #171815 100%);
+      border: 1px solid #A18B62;
+      cursor: ew-resize;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+    }
+
+    /* =====================================================================
+     * 1974 INTELLIGENCE DOSSIER & PAPER LOGBOOK (.paper-document)
+     * ===================================================================== */
+    .paper-document {
+      position: relative;
+      background-color: var(--yellowed-paper);
+      background-image:
+        /* Subtle horizontal fold crease & aged vignette */
+        linear-gradient(180deg, transparent 49%, rgba(92, 76, 50, 0.12) 50%, rgba(255, 255, 255, 0.18) 51%, transparent 52%),
+        radial-gradient(circle at 92% 12%, rgba(121, 88, 67, 0.14) 0%, transparent 35%),
+        radial-gradient(circle at 50% 50%, #dfd3b4 0%, #d1c19b 75%, #bfa97e 100%);
+      color: var(--ink-typewriter);
+      border: 1px solid #8c7b5b;
+      border-right-width: 2px;
+      border-bottom-width: 2px;
+      border-right-color: #6e5e42;
+      border-bottom-color: #615238;
+      border-radius: 2px;
+      box-shadow:
+        0 4px 10px rgba(0, 0, 0, 0.55),
+        inset 0 0 24px rgba(115, 92, 58, 0.22);
+    }
+
+    .paper-document-unlogged {
+      position: relative;
+      background-color: #2b2e29;
+      background-image:
+        repeating-linear-gradient(
+          -45deg,
+          rgba(0, 0, 0, 0.08) 0px,
+          rgba(0, 0, 0, 0.08) 6px,
+          transparent 6px,
+          transparent 12px
+        ),
+        linear-gradient(180deg, #323630 0%, #262924 100%);
+      border: 1px dashed #697062;
+      border-radius: 2px;
+      color: #b5b09d;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.55);
+    }
+
+    /* Rubber Ink Stamp */
+    .ink-stamp {
+      display: inline-block;
+      border: 2px solid var(--stamp-red);
+      color: var(--stamp-red);
+      padding: 1px 6px;
+      font-family: 'Courier Prime', 'IBM Plex Mono', monospace;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      transform: rotate(-2.5deg);
+      opacity: 0.88;
+      box-shadow: inset 0 0 2px rgba(143, 58, 43, 0.35);
+    }
+
+    /* =====================================================================
+     * MECHANICAL 4-WHEEL CIPHER DRUM TUMBLERS
+     * ===================================================================== */
+    .cipher-wheel-housing {
+      background: linear-gradient(180deg, #161815 0%, #252823 50%, #141613 100%);
+      border: 1.5px solid var(--old-brass);
+      border-top-color: #6b5b3e;
+      border-bottom-color: #b8a176;
+      border-radius: 2px;
+      box-shadow:
+        inset 0 4px 8px rgba(0, 0, 0, 0.9),
+        0 2px 4px rgba(0, 0, 0, 0.65);
+    }
+
+    .cipher-drum-window {
+      width: 100%;
+      background:
+        linear-gradient(180deg,
+          rgba(10, 11, 9, 0.88) 0%,
+          rgba(38, 40, 34, 0.2) 32%,
+          rgba(215, 200, 165, 0.08) 50%,
+          rgba(38, 40, 34, 0.2) 68%,
+          rgba(10, 11, 9, 0.88) 100%
+        ),
+        #1f211c;
+      border-top: 1px solid #0d0e0c;
+      border-bottom: 1px solid #4a4f44;
+      box-shadow: inset 0 3px 6px rgba(0,0,0,0.85);
+      transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    @keyframes drum-step-up {
+      0% { transform: translateY(5px); opacity: 0.65; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    @keyframes drum-step-down {
+      0% { transform: translateY(-5px); opacity: 0.65; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    .drum-anim-up { animation: drum-step-up 0.14s ease-out; }
+    .drum-anim-down { animation: drum-step-down 0.14s ease-out; }
+
+    /* Industrial Hazard Stripe Accent */
+    .hazard-trim {
+      background: repeating-linear-gradient(
+        -45deg,
+        #8a6530 0px,
+        #8a6530 6px,
+        #22241f 6px,
+        #22241f 12px
+      );
+      height: 4px;
+      width: 100%;
+      opacity: 0.75;
+    }
+
+    @keyframes pulse-slow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.52; }
+    }
+    .animate-pulse-slow {
+      animation: pulse-slow 2.4s infinite ease-in-out;
+    }
+
+    /* Drawer & Modal transitions */
+    .drawer-transition {
+      transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
+    }
+
+    /* V2.2 — Signal Workbench: authentic instrument glass & selectable paper. */
+    .workbench-panel {
+      background: linear-gradient(170deg, #303830, #20241f 55%, #171a16);
+      border: 1px solid #6b6755;
+      box-shadow: inset 0 2px 0 #4d574c, inset 0 0 20px #0c0f0d, 0 6px 15px #080a08;
+    }
+    .signal-chart-shell {
+      position: relative;
+      background: #0b120c;
+      border: 5px solid #242923;
+      outline: 1px solid #756d53;
+      box-shadow: inset 0 0 25px #000, 0 2px 12px #000;
+      overflow: hidden;
+    }
+    #band-memory-canvas { width: 100%; height: auto; display: block; cursor: crosshair; touch-action: manipulation; }
+    #operator-note {
+      font-family: 'Courier Prime', monospace;
+      font-size: 14px; line-height: 1.65; color: #30261e;
+      background: repeating-linear-gradient(to bottom, transparent 0, transparent 26px, rgba(101,82,54,.28) 27px), transparent;
+      border: 1px dashed #927d5c; width: 100%; min-height: 174px;
+      padding: 9px 12px; resize: vertical; user-select: text; -webkit-user-select: text;
+      caret-color: #463224;
+    }
+    #operator-note:focus { outline: 2px solid #795843; outline-offset: 1px; }
+    #operator-note::placeholder { color: #7e705b; opacity: 1; }
+    .workbench-legend { display: inline-flex; align-items: center; gap: 5px; }
+    .workbench-legend::before { content:''; width: 13px; height: 3px; background: var(--legend-color, #8BA88A); }
+    .journal-tab { min-height: 42px; }
+    @media (max-width: 640px) {
+      #journal-drawer .journal-tab { font-size: 10px; letter-spacing: -.02em; padding: 8px 5px; min-width: 0; flex: 1; }
+      #journal-drawer > div:nth-child(2) { padding-left: 9px; padding-right: 9px; gap: 3px; }
+      .workbench-panel { padding: 12px; }
+      #operator-note { font-size: 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .drum-anim-up, .drum-anim-down, .animate-pulse-slow { animation: none !important; }
+    }
+  </style>
+</head>
+<body class="relative w-full h-full select-none overflow-hidden">
+
+  <!-- 3D WebGL Canvas Container -->
+  <div id="canvas-container" class="absolute inset-0 w-full h-full z-0 cursor-grab active:cursor-grabbing"></div>
+
+  <!-- Subtle Analog CRT / Film Overlay -->
+  <div class="analog-overlay absolute inset-0 z-10"></div>
+
+  <!-- 3D Interactive Hover Tooltip (Stamped Brass / Bakelite Tag) -->
+  <div id="hover-tooltip" class="fixed z-30 pointer-events-none opacity-0 transition-opacity duration-150 px-2.5 py-1 worn-label text-[#C89049] font-mono-tech text-xs tracking-wider shadow-lg">
+    NÚM DÒ TẦN SỐ
+  </div>
+
+  <!-- INITIAL LOADING & FIRST-INTERACTION OVERLAY (1974 FIELD BRIEFING CASE) -->
+  <div id="intro-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-[#0d100e]/95 p-4 transition-opacity duration-500" role="dialog" aria-modal="true" aria-label="Nhận ca trực">
+    <div class="panel-hardware screw-corners max-w-lg w-full p-6 sm:p-7 relative overflow-hidden">
+      <div class="hazard-trim mb-3"></div>
+      <div class="flex flex-wrap items-center justify-between border-b border-[#72765C]/40 pb-2.5 mb-4 gap-2">
+        <span class="worn-label">PROPERTY OF CHRONOS // TRẠM BẮC CỰC #07</span>
+        <span class="worn-label-brass px-2 py-0.5 text-[10px] font-mono-tech">CAL. 14.11.1974 // SW-74</span>
+      </div>
+
+      <h1 class="font-editorial text-3xl sm:text-5xl font-bold tracking-wider text-[#E0D8C1] mb-1 engraved-text">
+        THE LAST FREQUENCY
+      </h1>
+      <p class="font-mono-tech text-[11px] uppercase tracking-widest text-[#C89049] mb-4">
+        NIGHT SHIFT // MỘT CA TRỰC. NĂM TÍN HIỆU. MỘT CƠ HỘI.
+      </p>
+
+      <!-- Briefing Note on Yellowed Paper -->
+      <div class="paper-document font-typewriter p-3.5 sm:p-4 mb-4 text-xs sm:text-sm leading-relaxed">
+        <div class="flex items-center justify-between border-b border-[#795843]/30 pb-1 mb-2 text-[10px] font-bold text-[#795843]">
+          <span>LỆNH ĐIỀU ĐỘNG KHẨN // MẬT ĐỘ TỪ TRƯỜNG CẤP 9</span>
+          <span class="ink-stamp">PRIORITY 1</span>
+        </div>
+        <p>
+          Bão từ cực đại đã cắt đứt toàn bộ mạng viễn thông Bắc Bán Cầu. Trên bàn trực chỉ còn máy thu sóng ngắn quân dụng <strong>KESTREL SW-74</strong>.
+          Năm trạm phát cuối cùng trên dải tần <strong>3.00 – 12.00 MHz</strong> đang phát đi những mảnh khóa của <strong>Dự Án CHRONOS</strong>.
+        </p>
+      </div>
+
+      <div class="vintage-instrument p-3.5 mb-5 space-y-2 text-xs font-mono-tech text-[#D7C8A5]/90">
+        <div class="flex items-start gap-2">
+          <span class="text-[#C89049] font-bold">[01]</span>
+          <span>Gạt công tắc <strong class="text-[#E0D8C1]">POWER</strong> trên mặt máy radio (hoặc nhấn phím <kbd class="px-1.5 py-0.5 bg-[#242521] border border-[#555D55] text-[#C89049]">P</kbd>).</span>
+        </div>
+        <div class="flex items-start gap-2">
+          <span class="text-[#C89049] font-bold">[02]</span>
+          <span>Xoay <strong class="text-[#E0D8C1]">Núm TUNING</strong> 3D (hoặc phím mũi tên / nút bước nhảy) để rà sóng. Căn <strong>ANTEN</strong> để tín hiệu mạnh; giữ <strong>SPACE / THU BẢN TIN</strong> cho đến khi băng ghi đầy.</span>
+        </div>
+        <div class="flex items-start gap-2">
+          <span class="text-[#C89049] font-bold">[03]</span>
+          <span>Đối chiếu 5 phiếu ghi trong <strong class="text-[#D7C8A5]">Tập Hồ Sơ Điều Tra</strong> để quay đúng <strong class="text-[#C89049]">Khóa Cơ Khí 4 Số</strong> và mở <strong class="text-[#8BA88A]">Tần Số Cuối Cùng</strong>.</span>
+        </div>
+      </div>
+
+      <div id="webgl-error-box" class="hidden mb-4 p-3 bg-[#795843]/30 border border-[#C89049] text-xs font-mono-tech text-[#E0D8C1]">
+        Cảnh báo: Trình duyệt hạn chế WebGL hoặc ngữ cảnh âm thanh. Hệ thống đã kích hoạt chế độ tương thích an toàn.
+      </div>
+
+      <div class="shift-brief"><label for="difficulty">CHỌN CA TRỰC</label><select id="difficulty"><option value="cadet">Tân binh · 18 phút · sóng ổn định</option><option value="operator" selected>Điện báo viên · 12 phút · bão từ</option><option value="veteran">Cựu binh · 9 phút · trôi sóng mạnh</option></select><p>Thu đủ 5 bản tin → giải khóa CHRONOS → phát SOS 8 giây. Hết pin hoặc hết giờ: mất liên lạc. Tắt PWR để sạc; dùng 3 bình làm mát khi máy nóng. Hồ sơ và menu tự dừng đồng hồ.</p><span id="resume-notice"></span></div>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <button id="btn-start-session" class="btn-analog active-amber flex-1 py-3 px-5 font-mono-tech text-xs sm:text-sm font-bold tracking-widest uppercase">
+          NHẬN CA TRỰC →
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <aside id="mission-panel" aria-label="Bảng nhiệm vụ ca trực">
+    <div class="shift-heading"><span><i></i> LIVE / TRẠM 07</span><button id="btn-pause" aria-label="Tạm dừng ca trực">Ⅱ TẠM DỪNG</button></div>
+    <div class="shift-clock"><div><small>CỬA SỔ LIÊN LẠC</small><strong id="mission-time">12:00</strong></div><div class="shift-score"><small>ĐIỂM CA TRỰC</small><b id="mission-score">00000</b><span id="mission-combo">CHỜ TÍN HIỆU</span></div></div>
+    <div id="storm-status" class="storm-strip">KHÍ QUYỂN ỔN ĐỊNH</div>
+    <div class="shift-resources"><label>ẮC QUY <b id="battery-value">100%</b><meter id="battery-meter" min="0" max="100" value="100"></meter></label><label>NHIỆT ĐÈN <b id="heat-value">12°C</b><meter id="heat-meter" min="0" max="100" value="12"></meter></label></div>
+    <div class="mission-order"><small id="mission-phase">01 / THU THẬP</small><p id="mission-objective">Bắt đầu tại BOREALIS, vùng 3.1–3.3 MHz. Căn anten khoảng 35°.</p></div>
+    <label class="antenna-label" for="antenna">HƯỚNG ANTEN <b id="antenna-value">090°</b></label>
+    <input id="antenna" type="range" min="0" max="180" value="90" aria-label="Hướng anten" />
+    <div class="antenna-scale"><span>000° / BẮC</span><span>090° / ĐÔNG</span><span>180° / NAM</span></div>
+    <div class="record-readout"><span id="capture-status">DÒ SÓNG & CĂN ANTEN</span><b id="capture-value">0%</b></div>
+    <div class="capture-track"><div id="capture-fill"></div></div>
+    <button id="btn-capture" class="capture-button" aria-label="Giữ để thu bản tin">● GIỮ ĐỂ THU BẢN TIN <kbd>SPACE</kbd></button>
+    <div class="shift-actions"><button id="btn-scan">QUÉT SÓNG <kbd>R</kbd><small>−3% PIN</small></button><button id="btn-coolant">LÀM MÁT <kbd>C</kbd><small id="coolant-count">3 BÌNH</small></button></div>
+    <p id="mission-feedback" role="status" aria-live="polite">Thu mỗi trạm: +7% pin. Tắt PWR để sạc & hạ nhiệt.</p>
+    <div class="shift-footer"><span id="mission-difficulty">ĐIỆN BÁO VIÊN</span><span id="save-status">TỰ ĐỘNG LƯU</span></div>
+  </aside>
+  <div id="mission-modal" class="shift-overlay" role="dialog" aria-modal="true" aria-labelledby="mission-modal-title" hidden>
+    <div class="shift-modal-card"><small>CHRONOS / BÁO CÁO CA TRỰC</small><h2 id="mission-modal-title">Ca trực tạm dừng</h2><p id="mission-modal-text"></p><div id="mission-summary"></div><button id="btn-resume">TIẾP TỤC CA TRỰC →</button><button id="btn-new-shift">CA TRỰC MỚI</button></div>
+  </div>
+  <!-- MAIN WEATHERED ANALOG HUD OVERLAY -->
+  <div class="fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-2.5 sm:p-4">
+
+    <!-- TOP BAR: Left Riveted Nameplate Unit & Right Analog Signal Instrument Unit -->
+    <div class="flex flex-wrap items-start justify-between gap-2 sm:gap-4 w-full">
+
+      <!-- TOP-LEFT: Riveted Equipment Nameplate & Mechanical Counter -->
+      <div id="equipment-header" class="panel-hardware screw-corners px-3.5 py-2.5 pointer-events-auto flex flex-col gap-1.5 max-w-xs sm:max-w-md">
+        <div class="flex items-center justify-between border-b border-[#555D55]/60 pb-1 gap-2">
+          <span class="font-mono-tech text-[9px] tracking-widest text-[#A18B62] uppercase">
+            PROPERTY OF CHRONOS // SN:74-0911
+          </span>
+          <span class="font-mono-tech text-[9px] px-1.5 py-0.2 bg-[#181916] text-[#8BA88A] border border-[#555D55]">
+            SW-74 / NIGHT SHIFT
+          </span>
+        </div>
+
+        <div class="flex items-center gap-2.5 py-0.5">
+          <!-- Physical Jewel Pilot Lamp -->
+          <span id="status-led" class="pilot-jewel lamp-off w-3.5 h-3.5 shrink-0" title="Đèn báo trạng thái máy thu"></span>
+          <h2 class="font-editorial text-lg sm:text-2xl font-bold tracking-wider text-[#E0D8C1] leading-none engraved-text">
+            THE LAST FREQUENCY
+          </h2>
+          <span id="state-badge" class="ml-auto worn-label text-[10px] tracking-widest">
+            OFF
+          </span>
+        </div>
+
+        <div class="flex items-center justify-between text-[10px] font-mono-tech pt-0.5 gap-2">
+          <span id="hud-clock-label" class="worn-label text-[#D7C8A5]">CA TRỰC 14.11.1974 // 23:42</span>
+          <div class="flex items-center gap-1 bg-[#161815] px-2 py-0.5 border border-[#454a42] shadow-inner">
+            <span class="text-[9px] text-[#72765C]">LOG:</span>
+            <span id="progress-counter" class="text-[#8BA88A] font-bold tracking-wider">0/5 TÍN HIỆU</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- TOP-RIGHT: Vintage Signal Measurement & CRT Monitor Unit -->
+      <div id="receiver-hud" class="panel-hardware screw-corners px-3.5 py-2.5 pointer-events-auto min-w-[265px] sm:min-w-[335px]">
+        <div class="flex items-center justify-between border-b border-[#555D55]/60 pb-1 mb-2">
+          <span class="font-mono-tech text-[9px] uppercase tracking-widest text-[#A18B62]">
+            BỘ ĐO SÓNG MANG // AN/GRR-74
+          </span>
+          <span id="hud-callsign-tag" class="worn-label text-[9px]">NO CARRIER</span>
+        </div>
+
+        <div class="flex items-stretch justify-between gap-2.5 mb-2">
+          <!-- Amber Glass Frequency Drum Window -->
+          <div class="vintage-instrument px-3 py-1.5 flex-1 flex flex-col justify-between relative overflow-hidden">
+            <!-- Red Hairline Optical Cursor -->
+            <div class="absolute inset-y-0 left-1/2 w-[1px] bg-[#9E4735]/45 pointer-events-none"></div>
+            <div class="font-mono-tech text-[9px] uppercase tracking-widest text-[#A18B62]/80">
+              TẦN SỐ THU (BAND SW)
+            </div>
+            <div class="flex items-baseline gap-1.5 relative z-10">
+              <span id="hud-freq" class="font-mono-tech text-2xl sm:text-3xl font-bold text-[#C89049] tracking-wider drop-shadow-[0_0_6px_rgba(200,144,73,0.3)]">
+                3.00
+              </span>
+              <span class="font-mono-tech text-[11px] font-semibold text-[#A18B62]">MHz</span>
+            </div>
+          </div>
+
+          <!-- Recessed Phosphor CRT Oscilloscope Hood -->
+          <div class="flex flex-col items-end">
+            <button id="btn-toggle-scope-mode" class="worn-label text-[9px] text-[#8BA88A] hover:border-[#A18B62] pointer-events-auto mb-1" title="Chuyển đổi dạng sóng / phổ tần">
+              CRT: WAVE
+            </button>
+            <div class="vintage-instrument p-1 relative">
+              <canvas id="hud-wave-canvas" width="108" height="36" class="block bg-[#111712] border border-[#3c4a3c]"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Physical S-Meter Scale & Moving Needle + Signal Lock Lamp -->
+        <div class="vintage-instrument p-2 space-y-1.5">
+          <div class="flex justify-between items-center font-mono-tech text-[9px] text-[#D7C8A5]/80">
+            <span>S-METER: S1 · · S3 · · S5 · · S7 · · S9 <span class="text-[#C89049]">+20dB</span></span>
+            <span id="hud-sig-pct" class="text-[#C89049] font-bold">0%</span>
+          </div>
+
+          <!-- Analog S-Meter Window with Tick Marks, Fill Bar & Physical Needle -->
+          <div class="relative w-full h-3.5 bg-[#121411] border border-[#3d423a] overflow-hidden">
+            <!-- Scale Graduation Ticks -->
+            <div class="absolute inset-0 opacity-45 pointer-events-none" style="background: repeating-linear-gradient(90deg, transparent 0px, transparent 11px, #A18B62 11px, #A18B62 12px);"></div>
+            <!-- Warm Backlight Bar -->
+            <div id="hud-sig-bar" class="h-full bg-gradient-to-r from-[#795843]/70 via-[#C89049]/80 to-[#8BA88A]/90 transition-all duration-75" style="width: 0%"></div>
+            <!-- Moving Mechanical Needle Pointer -->
+            <div id="hud-smeter-needle" class="absolute top-0 bottom-0 w-[2px] bg-[#E0D8C1] shadow-[0_0_4px_#C89049] transition-all duration-75" style="left: 2%"></div>
+          </div>
+
+          <!-- 2-Second Phase Lock Indicator -->
+          <div id="lock-container" class="hidden pt-1 border-t border-[#383e36]">
+            <div class="flex justify-between items-center font-mono-tech text-[10px] text-[#8BA88A]">
+              <span id="lock-status-text" class="animate-pulse-slow">ĐANG THU BẢN TIN...</span>
+              <span id="lock-timer-text" class="font-bold">0.0s</span>
+            </div>
+            <div class="w-full h-2 bg-[#0e110e] border border-[#4c5c4b] mt-1 p-0.5">
+              <div id="hud-lock-bar" class="h-full bg-[#8BA88A] transition-all duration-75" style="width: 0%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- MIDDLE LIVE TELETYPE / DEMODULATION BANNER -->
+    <div class="w-full flex flex-col items-center pointer-events-none my-auto justify-end pb-2">
+      <!-- Active Station Transmission Box -->
+      <div id="transmission-banner" class="hidden panel-phosphor screw-corners p-3.5 sm:p-4 max-w-xl w-full pointer-events-auto transition-all duration-300">
+        <div class="flex items-center justify-between border-b border-[#72765C]/45 pb-1.5 mb-2">
+          <div class="flex items-center gap-2">
+            <span class="pilot-jewel lamp-phosphor w-2.5 h-2.5 animate-pulse-slow"></span>
+            <span id="tx-station-title" class="font-mono-tech text-xs sm:text-sm font-bold text-[#E0D8C1] tracking-wider uppercase">
+              TRẠM PHÁT ĐÃ KHÓA
+            </span>
+          </div>
+          <span id="tx-station-code" class="worn-label text-[10px] text-[#8BA88A]">
+            MÃ MORSE
+          </span>
+        </div>
+
+        <!-- Recessed Teletype Strip Readout -->
+        <div class="vintage-instrument p-2.5 mb-2.5">
+          <p id="tx-subtitle" class="font-typewriter text-xs sm:text-sm text-[#D7C8A5] leading-relaxed min-h-[3.1rem]">
+            Đang giải điều chế luồng dữ liệu âm thanh...
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1 text-[11px] font-mono-tech">
+          <span id="tx-clue-summary" class="text-[#C89049]">Đã đóng dấu lưu vào Tập Hồ Sơ Tín Hiệu.</span>
+          <div class="flex items-center gap-1.5">
+            <button id="btn-replay-tx" class="btn-analog px-2.5 py-1 text-[11px]">
+              PHÁT LẠI BĂNG
+            </button>
+            <button id="btn-open-journal-inline" class="btn-analog active-phosphor px-2.5 py-1 text-[11px] font-semibold">
+              MỞ HỒ SƠ & KHÓA SỐ →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subtle Proximity Hint when near a station -->
+      <div id="proximity-toast" class="opacity-0 transition-opacity duration-200 mt-2 px-3 py-1 worn-label text-[11px] text-[#C89049]">
+        PHÁT HIỆN SÓNG MANG LÂN CẬN — GIẢM TỐC ĐỘ XOAY ĐỂ KHÓA PHA
+      </div>
+    </div>
+
+    <!-- BOTTOM BAR: Stamped Preset Tags & Physical Bakelite Control Strip -->
+    <div class="flex flex-col gap-1.5 w-full items-center pointer-events-none">
+
+      <!-- Discovery-First Band Indicators / Unlocked Station Metal Tags -->
+      <div id="station-chips" class="flex flex-wrap justify-center gap-1.5 pointer-events-auto">
+        <!-- Populated dynamically by JS -->
+      </div>
+
+      <!-- Main Bottom Weathered Hardware Control Strip -->
+      <div id="radio-controls" class="w-full flex flex-col gap-2 panel-hardware screw-corners px-3.5 py-2.5 pointer-events-auto">
+        <!-- Analog Slide Rule Fine-Tuning Bar -->
+        <div class="flex items-center gap-2.5 px-1">
+          <span class="worn-label text-[9px] text-[#A18B62] whitespace-nowrap">LOW 3.0 MHz</span>
+          <input aria-label="Tần số MHz nhân 100" id="hud-freq-slider" type="range" min="300" max="1200" step="1" value="300" class="retro-slider" aria-label="Thanh kéo dò tần số" />
+          <span class="worn-label text-[9px] text-[#A18B62] whitespace-nowrap">HIGH 12.0 MHz</span>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-0.5 border-t border-[#555D55]/45">
+          <!-- Left: Bakelite Power Switch & Mechanical Step Push-Buttons -->
+          <div class="flex items-center gap-1.5 sm:gap-2">
+            <button id="btn-hud-power" class="btn-analog mechanical-switch px-3 py-2 font-mono-tech text-xs font-bold tracking-wider flex items-center gap-2" title="Công tắc nguồn chính (Phím P)">
+              <span id="power-dot" class="pilot-jewel lamp-off w-2.5 h-2.5"></span>
+              <span>PWR ON/OFF</span>
+            </button>
+
+            <div class="h-6 w-[2px] bg-[#181916] border-r border-[#555D55]/50 mx-0.5 hidden sm:block"></div>
+
+            <!-- Tactile Step Tuning Push-Buttons -->
+            <div class="flex items-center gap-1" role="group" aria-label="Nút bấm cơ khí tinh chỉnh tần số">
+              <button data-step="-0.10" class="btn-step btn-analog px-2.5 py-2 font-mono-tech text-xs" title="Giảm 0.10 MHz">-0.1</button>
+              <button data-step="-0.01" class="btn-step btn-analog px-2.5 py-2 font-mono-tech text-xs font-semibold" title="Giảm 0.01 MHz (Phím Trái)">-0.01</button>
+              <button data-step="0.01" class="btn-step btn-analog px-2.5 py-2 font-mono-tech text-xs font-semibold" title="Tăng 0.01 MHz (Phím Phải)">+0.01</button>
+              <button data-step="0.10" class="btn-step btn-analog px-2.5 py-2 font-mono-tech text-xs" title="Tăng 0.10 MHz">+0.1</button>
+            </div>
+          </div>
+
+          <!-- Center: Stenciled Operating Plate (Hidden on smaller screens) -->
+          <div class="hidden xl:flex items-center gap-2 font-mono-tech text-[10px] text-[#D7C8A5]/70 tracking-wider uppercase">
+            <span class="worn-label">XOAY NÚM 3D / PHÍM ◀ ▶</span>
+            <span>•</span>
+            <span class="worn-label">GIỮ SPACE ĐỂ THU · ESC TẠM DỪNG</span>
+          </div>
+
+          <!-- Right: Engraved Instrument Function Keys -->
+          <div class="flex items-center gap-1.5 sm:gap-2 ml-auto sm:ml-0">
+            <button id="btn-journal" class="btn-analog px-3 py-2 font-mono-tech text-xs font-semibold flex items-center gap-2 relative">
+              <span>HỒ SƠ & KHÓA SỐ</span>
+              <span id="journal-badge" class="worn-label-brass px-1.5 py-0.2 text-[10px]">0/5</span>
+            </button>
+
+            <button id="btn-workbench" class="btn-analog px-2.5 py-2 font-mono-tech text-xs" title="Máy phân tích vết sóng, ghi chú (Phím K)">
+              BẢN ĐỒ SÓNG
+            </button>
+            <button id="btn-sound" class="btn-analog px-2.5 py-2 font-mono-tech text-xs" title="Bảng điều chỉnh Âm thanh & Hiển thị">
+              CẤU HÌNH MÁY
+            </button>
+
+            <button id="btn-help" class="btn-analog px-2.5 py-2 font-mono-tech text-xs" title="Sổ tay vận hành KESTREL SW-74">
+              SỔ VẬN HÀNH
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 1974 INTELLIGENCE DOSSIER & MECHANICAL CIPHER DRAWER                  -->
+  <!-- ===================================================================== -->
+  <div id="journal-backdrop" class="fixed inset-0 z-40 bg-black/70 hidden opacity-0 transition-opacity duration-250"></div>
+
+  <aside id="journal-drawer" class="fixed z-50 inset-x-0 bottom-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:w-[560px] max-h-[89vh] sm:max-h-none panel-hardware screw-corners flex flex-col drawer-transition translate-y-full sm:translate-y-0 sm:translate-x-full">
+    <!-- Metal Clipboard Header Clamp -->
+    <div class="flex items-center justify-between px-5 py-3.5 border-b-2 border-[#181916] bg-[#242823]">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="worn-label-brass px-1.5 py-0.2 text-[9px]">TOP SECRET // CHRONOS-74</span>
+          <span class="font-mono-tech text-[10px] text-[#A18B62]">FILE REF: LOG-11/74</span>
+        </div>
+        <h3 class="font-editorial text-2xl font-bold text-[#E0D8C1] mt-0.5 engraved-text">
+          Hồ Sơ Thu Sóng & Hộp Khóa Cơ Khí
+        </h3>
+      </div>
+      <button id="btn-close-journal" class="btn-analog px-3 py-1.5 font-mono-tech text-xs">
+        ĐÓNG HỒ SƠ [ESC]
+      </button>
+    </div>
+
+    <!-- Manila Dossier Index Tabs -->
+    <div class="flex border-b border-[#555D55] px-5 pt-2.5 gap-2 bg-[#1c1f1b]">
+      <button data-tab="tab-clues" class="journal-tab border-t border-x border-[#A18B62] bg-[#363b33] text-[#E0D8C1] py-2 px-3 font-mono-tech text-xs font-bold tracking-wider">
+        FOLDER I: PHIẾU GHI TÍN HIỆU (<span id="tab-clue-count">0/5</span>)
+      </button>
+      <button data-tab="tab-decoder" class="journal-tab border-t border-x border-[#454a42] bg-[#242722] text-[#D7C8A5]/60 hover:text-[#E0D8C1] py-2 px-3 font-mono-tech text-xs font-bold tracking-wider">
+        FOLDER II: KHÓA CƠ KHÍ CHRONOS
+      </button>
+      <button data-tab="tab-workbench" class="journal-tab border-t border-x border-[#454a42] bg-[#242722] text-[#D7C8A5]/60 hover:text-[#E0D8C1] py-2 px-3 font-mono-tech text-xs font-bold tracking-wider" title="Bản đồ các tần số đã rà và sổ ghi chú">
+        FOLDER III: BÀN PHÂN TÍCH
+      </button>
+    </div>
+
+    <!-- Drawer Body -->
+    <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+
+      <!-- TAB 1: 1974 PAPER LOGBOOK & FIELD NOTES -->
+      <div id="tab-clues" class="space-y-3.5">
+        <div class="paper-document p-3.5 font-typewriter text-xs leading-relaxed flex flex-col gap-2">
+          <div class="flex items-center justify-between border-b border-[#795843]/30 pb-1 text-[10px] font-bold text-[#795843]">
+            <span>CHỈ THỊ TRỰC ĐÀI // BÀN THU KESTREL SW-74</span>
+            <span>TRANG 01 / LOGBOOK</span>
+          </div>
+          <div>
+            Dò tìm 5 nguồn phát trên dải tần <strong>3.00 – 12.00 MHz</strong>. Mỗi phiếu thu sóng chứa một tham số để xác định <strong>Mã Ủy Quyền 4 Chữ Số [D1-D2-D3-D4]</strong>.
+          </div>
+          <div class="flex items-center justify-between pt-1.5 border-t border-[#795843]/30 font-mono-tech">
+            <span class="text-[11px] text-[#3b3326] font-semibold">Radar Quét Phụ Trợ (Hiện vùng dải tần nghi vấn):</span>
+            <button id="btn-assist-mode" class="btn-analog px-2.5 py-1 text-[10px]">ĐANG TẮT</button>
+          </div>
+        </div>
+
+        <div id="journal-stations-list" class="space-y-3.5">
+          <!-- Populated dynamically as 1974 paper intelligence slips -->
+        </div>
+      </div>
+
+      <!-- TAB 2: MECHANICAL 4-WHEEL CIPHER DRUM DECODER -->
+      <div id="tab-decoder" class="hidden space-y-4">
+        <div class="panel-phosphor screw-corners p-4 space-y-3.5">
+          <div class="flex items-center justify-between border-b border-[#555D55] pb-2">
+            <div>
+              <div class="font-mono-tech text-[9px] text-[#A18B62] tracking-widest">MECHANICAL CIPHER UNIT // MK-IV</div>
+              <span class="font-mono-tech text-xs font-bold text-[#E0D8C1] uppercase">CƠ CẤU KHÓA TRỐNG XOAY CHRONOS</span>
+            </div>
+            <span id="decoder-lock-badge" class="worn-label text-[10px] text-[#C89049]">
+              CHƯA MỞ KHÓA
+            </span>
+          </div>
+
+          <!-- Interlock status banner (Requires all 5 stations discovered first) -->
+          <div id="decoder-interlock-notice" class="vintage-instrument p-2.5 font-mono-tech text-[11px] text-[#D7C8A5]">
+            🔒 <strong>CHỐT HÃM AN NINH CƠ KHÍ:</strong> Cần thu đủ <strong>5/5 phiếu tín hiệu</strong> để nhả chốt khóa trước khi xác thực mã Chronos.
+          </div>
+
+          <!-- Field Calculation Sheet on Yellowed Paper -->
+          <div class="paper-document p-3 space-y-1.5 font-typewriter text-[11px]">
+            <div class="flex items-center justify-between border-b border-[#795843]/30 pb-1 mb-1 text-[10px] font-bold text-[#795843]">
+              <span>BẢNG QUY CHIẾU THAM SỐ KHÓA [D1 - D2 - D3 - D4]</span>
+              <span>FORM CR-74B</span>
+            </div>
+            <div><strong class="text-[#795843]">[BÁNH SỐ D1]:</strong> Mã số Khu Vực Bắc Cực phát lặp lại bằng xung Morse ở vùng sóng thấp (3–4 MHz).</div>
+            <div><strong class="text-[#795843]">[BÁNH SỐ D2]:</strong> Áp dụng quy tắc dịch mã của Đài Số Đếm lên quân số thức trực trên Tàu Orpheus.</div>
+            <div><strong class="text-[#795843]">[BÁNH SỐ D3]:</strong> Số lượng vệ tinh lớp Helios còn hoạt động theo báo cáo từ Trạm Rừng Sâu K-19.</div>
+            <div><strong class="text-[#795843]">[BÁNH SỐ D4]:</strong> Chữ số kiểm tra tính từ <code>(D1 + D3) × Hệ số hiệu chuẩn pha</code> của vệ tinh vùng sóng cao.</div>
+          </div>
+
+          <!-- 4-Wheel Mechanical Brass & Steel Drum Tumblers -->
+          <div class="grid grid-cols-4 gap-2.5 pt-1">
+            <div class="cipher-wheel-housing flex flex-col items-center p-2">
+              <span class="worn-label text-[9px] mb-1.5">ROTOR D1</span>
+              <button data-digit="0" data-dir="1" class="digit-btn btn-analog w-full py-1.5 text-xs font-mono-tech" title="Quay bánh số D1 lên">▲</button>
+              <div class="cipher-drum-window my-1.5 py-2 text-center">
+                <span id="digit-val-0" class="font-mono-tech text-2xl sm:text-3xl font-bold text-[#E0D8C1] tracking-wider inline-block">0</span>
+              </div>
+              <button data-digit="0" data-dir="-1" class="digit-btn btn-analog w-full py-1.5 text-xs font-mono-tech" title="Quay bánh số D1 xuống">▼</button>
+            </div>
+
+            <div class="cipher-wheel-housing flex flex-col items-center p-2">
+              <span class="worn-label text-[9px] mb-1.5">ROTOR D2</span>
+              <button data-digit="1" data-dir="1" class="digit-btn btn-analog w-full py-1.5 text-xs font-mono-tech" title="Quay bánh số D2 lên">▲</button>
+              <div class="cipher-drum-window my-1.5 py-2 text-center">
+                <span id="digit-val-1" class="font-mono-tech text-2xl sm:text-3xl font-bold text-[#E0D8C1] tracking-wider inline-block">0</span>
+              </div>
+              <button data-digit="1" data-dir="-1" class="digit-btn btn-analog w-full py-1.5 text-xs font-mono-tech" title="Quay bánh số D2 xuống">▼</button>
+            </div>
+
+            <div class="cipher-wheel-housing flex flex-col items-center p-2">
+              <span class="worn-label text-[9px] mb-1.5">ROTOR D3</span>
+              <button data-digit="2" data-dir="1" class="digit-btn btn-analog w-full py-1.5 text-xs font-mono-tech" title="Quay bánh số D3 lên">▲</button>
+              <div class="cipher-drum-window my-1.5 py-2 text-center">
+                <span id="digit-val-2" class="font-mono-tech text-2xl sm:text-3xl font-bold text-[#E0D8C1] tracking-wider inline-block">0</span>
+              </div>
+              <button data-digit="2" data-dir="-1" class="digit-btn btn-analog w-full py-1.5 text-xs font-mono-tech" title="Quay bánh số D3 xuống">▼</button>
+            </div>
+
+            <div class="cipher-wheel-housing flex flex-col items-center p-2">
+              <span class="worn-label text-[9px] mb-1.5">ROTOR D4</span>
+              <button data-digit="3" data-dir="1" class="digit-btn btn-analog w-full py-1.5 text-xs font-mono-tech" title="Quay bánh số D4 lên">▲</button>
+              <div class="cipher-drum-window my-1.5 py-2 text-center">
+                <span id="digit-val-3" class="font-mono-tech text-2xl sm:text-3xl font-bold text-[#E0D8C1] tracking-wider inline-block">0</span>
+              </div>
+              <button data-digit="3" data-dir="-1" class="digit-btn btn-analog w-full py-1.5 text-xs font-mono-tech" title="Quay bánh số D4 xuống">▼</button>
+            </div>
+          </div>
+
+          <div id="decoder-feedback" class="vintage-instrument font-mono-tech text-xs text-center py-2 px-2.5 text-[#D7C8A5]">
+            Thu thập đủ 5 bản ghi tín hiệu và dập chốt XÁC THỰC KHÓA.
+          </div>
+
+          <div class="hazard-trim"></div>
+          <button id="btn-verify-code" class="btn-analog active-amber w-full py-3 px-4 font-mono-tech text-xs font-bold uppercase tracking-widest">
+            DẬP CHỐT XÁC THỰC KHÓA CƠ KHÍ CHRONOS
+          </button>
+        </div>
+
+        <!-- Final Frequency Mission Box (Revealed when 4-digit code is solved) -->
+        <div id="final-mission-box" class="hidden panel-hardware screw-corners p-4 border-2 border-[#8BA88A] space-y-2.5">
+          <div class="font-mono-tech text-xs font-bold text-[#8BA88A] uppercase flex items-center gap-2">
+            <span class="pilot-jewel lamp-phosphor w-3 h-3 animate-pulse-slow"></span>
+            <span>BỘ PHÁT ĐÁP KHẨN CẤP CHRONOS ĐÃ MỞ CHỐT!</span>
+          </div>
+          <p class="text-xs text-[#E0D8C1] leading-relaxed font-typewriter">
+            Khóa cơ khí <strong class="text-[#C89049]">7429</strong> đã khớp. Hãy tính <strong class="text-[#8BA88A]">Tần Số Cuối Cùng</strong> bằng cách lấy tần số Vệ tinh Helios-4 trừ đi độ lệch Doppler (<span>1.75 MHz</span>) và tự tay xoay núm radio tới tần số đó!
+          </p>
+          <div class="vintage-instrument flex items-center justify-between p-3">
+            <div>
+              <div class="font-mono-tech text-[10px] text-[#A18B62]">CÔNG THỨC TẦN SỐ ĐÍCH</div>
+              <div class="font-mono-tech text-sm sm:text-base font-bold text-[#8BA88A]">f_CHRONOS = f_HELIOS4 − 1.75 MHz</div>
+            </div>
+            <button id="btn-tune-final-hint" class="btn-analog active-phosphor px-3 py-2 font-mono-tech text-xs font-semibold">
+              ĐÓNG HỒ SƠ & RÀ SÓNG
+            </button>
+          </div>
+        </div>
+
+        <!-- 3-Tier Progressive Hint System (Never auto-reveals) -->
+        <div class="vintage-instrument p-3.5 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="font-mono-tech text-xs font-semibold text-[#C89049]">PHỤ LỤC GIẢI MÃ TRỰC CHIẾN (3 CẤP ĐỘ)</span>
+            <span id="hint-level-indicator" class="worn-label text-[9px]">ĐANG ĐÓNG</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button data-hint="1" class="btn-hint-tier btn-analog py-1.5 px-2 font-mono-tech text-[10px]">GỢI Ý 1: PHƯƠNG PHÁP</button>
+            <button data-hint="2" class="btn-hint-tier btn-analog py-1.5 px-2 font-mono-tech text-[10px]">GỢI Ý 2: LIÊN KẾT</button>
+            <button data-hint="3" class="btn-hint-tier btn-analog py-1.5 px-2 font-mono-tech text-[10px]">GỢI Ý 3: ĐÁP ÁN</button>
+          </div>
+          <div id="puzzle-hint-box" class="hidden paper-document font-typewriter text-[11px] p-3 space-y-1.5 leading-relaxed">
+            <!-- Populated based on selected tier -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: V2.2 OPERATOR WORKBENCH, LEARNED BAND TRACE + PERSONAL NOTES -->
+      <section id="tab-workbench" class="hidden space-y-4" aria-label="Bàn phân tích tín hiệu">
+        <div class="workbench-panel screw-corners p-4 space-y-3">
+          <div class="flex flex-wrap justify-between items-center gap-2 border-b border-[#72765C]/50 pb-2">
+            <div>
+              <div class="text-[9px] text-[#A18B62] tracking-[.2em]">BAND RECORDER / MODEL BR-74</div>
+              <h4 class="font-editorial text-2xl text-[#E0D8C1]">Bộ nhớ dấu vết sóng</h4>
+            </div>
+            <span class="worn-label" id="band-scan-count">0 / 451 Ô ĐÃ ĐO</span>
+          </div>
+          <p class="font-typewriter text-[12px] leading-relaxed text-[#D7C8A5]/85">Máy chỉ ghi lại cường độ tín hiệu ở các tần số bạn <strong>đã rà qua</strong>. Những khoảng tối chưa được khảo sát. Chạm vào đồ thị để quay lại một tần số.</p>
+          <div class="signal-chart-shell" title="Chọn một tần số bằng cách chạm vào biểu đồ">
+            <canvas id="band-memory-canvas" width="900" height="270" role="img" aria-label="Đồ thị mức sóng thu được từ 3 đến 12 MHz, các đoạn chưa đo được để trống"></canvas>
+          </div>
+          <div class="flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#CFC3A3] font-mono-tech">
+            <div class="flex flex-wrap gap-3">
+              <span class="workbench-legend" style="--legend-color:#8BA88A">Đã thu</span>
+              <span class="workbench-legend" style="--legend-color:#C89049">Tần số đang dò</span>
+              <span class="workbench-legend" style="--legend-color:#72765C">Chưa đo</span>
+            </div>
+            <span id="band-selected-frequency">VỊ TRÍ KIM: 3.00 MHz</span>
+          </div>
+        </div>
+        <div class="paper-document p-4 space-y-3 font-typewriter">
+          <div class="flex items-center justify-between gap-2 border-b border-[#795843]/40 pb-2">
+            <div>
+              <div class="text-[10px] font-bold text-[#795843]">OPERATOR'S FIELD NOTES // FORM CR-74C</div>
+              <h4 class="font-editorial text-xl text-[#30241a] font-bold">Nhật ký viết tay</h4>
+            </div>
+            <span class="ink-stamp">PRIVATE NOTES</span>
+          </div>
+          <label for="operator-note" class="text-[12px] text-[#46392a] block">Ghi lại mã Morse, phỏng đoán hoặc phép tính của bạn. Nội dung được lưu trên thiết bị này.</label>
+          <textarea id="operator-note" maxlength="1600" rows="6" spellcheck="false" placeholder="Ngày 14 tháng 11, 1974...&#10;Bắt được tiếng gõ trên sóng ngắn...&#10;Mã khả nghi: ..."></textarea>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span id="operator-note-status" class="text-[11px] text-[#605039]" aria-live="polite">CHƯA GHI CHÉP</span>
+            <div class="flex gap-2">
+              <button id="btn-save-operator-note" class="btn-analog px-3 py-2 text-xs">LƯU GHI CHÚ</button>
+              <button id="btn-export-operator-log" class="btn-analog active-amber px-3 py-2 text-xs">XUẤT NHẬT KÝ .TXT</button>
+            </div>
+          </div>
+        </div>
+        <div class="vintage-instrument p-3 space-y-2">
+          <div class="text-[10px] text-[#A18B62] tracking-widest">BĂNG THU TỰ ĐỘNG // RECENT RECORDS</div>
+          <div id="operator-event-list" class="space-y-1 text-[11px] text-[#D7C8A5] font-mono-tech" aria-live="polite">Chưa có tín hiệu nào được ghi vào nhật ký.</div>
+        </div>
+      </section>
+
+    </div>
+  </aside>
+
+  <!-- ===================================================================== -->
+  <!-- HARDWARE CALIBRATION & AUDIO SETTINGS MODAL                           -->
+  <!-- ===================================================================== -->
+  <div id="settings-modal" class="fixed inset-0 z-50 bg-black/75 hidden items-center justify-center p-4">
+    <div class="panel-hardware screw-corners max-w-md w-full p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-[#555D55] pb-3">
+        <div>
+          <div class="font-mono-tech text-[9px] text-[#A18B62] tracking-widest">CALIBRATION PANEL // SW-74</div>
+          <h3 class="font-editorial text-2xl font-bold text-[#E0D8C1] engraved-text">Cấu Hình Máy Thu & Hiển Thị</h3>
+        </div>
+        <button id="btn-close-settings" class="btn-analog px-2.5 py-1 font-mono-tech text-xs">ĐÓNG</button>
+      </div>
+
+      <div class="vintage-instrument p-4 space-y-4 font-mono-tech text-xs">
+        <!-- Master Volume -->
+        <div class="space-y-1.5">
+          <div class="flex justify-between">
+            <span>ĐỘ LỢI ÂM TẦN (AF GAIN / VOLUME)</span>
+            <span id="lbl-vol" class="text-[#C89049] font-bold">80%</span>
+          </div>
+          <input id="slider-volume" type="range" min="0" max="100" value="80" class="retro-slider" />
+        </div>
+
+        <!-- Mute Toggle -->
+        <div class="flex items-center justify-between pt-1">
+          <span>NGẮT LOA KIỂM ÂM (MUTE - PHÍM M)</span>
+          <button id="btn-mute-toggle" class="btn-analog px-3 py-1.5 text-xs">ĐANG BẬT TIẾNG</button>
+        </div>
+
+        <hr class="border-[#3d423a]" />
+
+        <!-- Reduced Motion -->
+        <div class="flex items-center justify-between">
+          <div>
+            <div>CHẾ ĐỘ CỐ ĐỊNH KHUNG NGẮM</div>
+            <div class="text-[10px] text-[#A18B62]">Giảm chuyển động camera & hạt bụi</div>
+          </div>
+          <button id="btn-reduced-motion" class="btn-analog px-3 py-1.5 text-xs">TẮT</button>
+        </div>
+
+        <!-- Graphics Quality -->
+        <div class="flex items-center justify-between">
+          <div>
+            <div>CẤU HÌNH ĐỔ BÓNG QUANG HỌC</div>
+            <div class="text-[10px] text-[#A18B62]">Độ phân giải kết xuất 3D</div>
+          </div>
+          <button id="btn-quality-toggle" class="btn-analog active-amber px-3 py-1.5 text-xs">CAO (HIGH)</button>
+        </div>
+
+        <hr class="border-[#3d423a]" />
+
+        <!-- Reset Save State -->
+        <div class="flex items-center justify-between pt-1">
+          <span class="text-[#C89049]">XÓA BĂNG GHI NHỚ (RESET LOGBOOK)</span>
+          <button id="btn-reset-progress" class="btn-analog px-3 py-1.5 text-xs border-[#9E4735] text-[#e09382]">ĐẶT LẠI</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- 1974 TECHNICAL FIELD MANUAL & README MODAL                            -->
+  <!-- ===================================================================== -->
+  <div id="help-modal" class="fixed inset-0 z-50 bg-black/75 hidden items-center justify-center p-4">
+    <div class="panel-hardware screw-corners max-w-2xl w-full max-h-[86vh] flex flex-col overflow-hidden">
+      <div class="flex items-center justify-between px-6 py-4 border-b border-[#555D55]">
+        <div>
+          <div class="font-mono-tech text-[10px] text-[#A18B62] uppercase">TECHNICAL MANUAL TM-11-5820 // REV 2.2</div>
+          <h3 class="font-editorial text-2xl font-bold text-[#E0D8C1] engraved-text">Sổ Tay Vận Hành Máy Thu KESTREL SW-74</h3>
+        </div>
+        <button id="btn-close-help" class="btn-analog px-3 py-1.5 font-mono-tech text-xs">ĐÓNG</button>
+      </div>
+
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm leading-relaxed">
+        <div class="paper-document p-4 space-y-2 font-typewriter">
+          <div class="flex justify-between items-center border-b border-[#795843]/30 pb-1 text-[10px] font-bold text-[#795843]">
+            <span>MỤC 1. QUY TRÌNH VẬN HÀNH CƠ KHÍ & PHÍM TẮT</span>
+            <span class="ink-stamp">APPROVED 1974</span>
+          </div>
+          <ul class="list-disc pl-5 space-y-1 text-xs">
+            <li><strong>Cấp Nguồn (POWER):</strong> Gạt công tắc <strong>POWER</strong> trên thân máy 3D, nút <code>PWR ON/OFF</code> dưới bảng điều khiển hoặc phím <code>P</code>. Đèn báo hổ phách và ống phóng CRT sẽ ấm dần lên.</li>
+            <li><strong>Rà Sóng Ngắn (3.00 – 12.00 MHz):</strong> Kéo xoay <strong>Núm TUNING khía rãnh</strong> trên mặt máy (hoặc dùng thanh kéo tinh chỉnh / phím <code>◀</code> <code>▶</code>, giữ <code>Shift</code> để bước nhảy <code>0.01 MHz</code>).</li>
+            <li><strong>Khóa Pha Tín Hiệu (Signal Lock):</strong> Khi áp sát tần số đài phát (<code>±0.03 MHz</code>), tiếng hú heterodyne trầm xuống và kim S-Meter vọt lên. Căn anten theo tín hiệu S-Meter, rồi giữ <strong>SPACE hoặc THU BẢN TIN</strong> trong thời gian hiển thị. Mất sóng hoặc buông nút sẽ làm băng ghi lùi. Bão từ làm trôi sóng và tăng nhiệt; tắt nguồn để sạc pin, nhấn C để dùng bình làm mát.</li>
+          </ul>
+        </div>
+
+        <div class="vintage-instrument p-4 space-y-2">
+          <h4 class="font-mono-tech text-xs font-bold uppercase text-[#C89049] tracking-wider">2. BẢNG QUY ĐỔI MÃ MORSE QUỐC TẾ ITU (CHỮ SỐ 0–9)</h4>
+          <p class="text-xs text-[#D7C8A5]/80 font-mono-tech">Đối chiếu xung ngắn (<code>.</code>) và xung dài (<code>-</code>) thu được trên sóng ngắn:</p>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 font-mono-tech text-xs text-[#E0D8C1]">
+            <div class="p-2 bg-[#161815] border border-[#454a42]"><strong>1:</strong> <code class="text-[#C89049]">.----</code></div>
+            <div class="p-2 bg-[#161815] border border-[#454a42]"><strong>2:</strong> <code class="text-[#C89049]">..---</code></div>
+            <div class="p-2 bg-[#161815] border border-[#454a42]"><strong>3:</strong> <code class="text-[#C89049]">...--</code></div>
+            <div class="p-2 bg-[#161815] border border-[#454a42]"><strong>4:</strong> <code class="text-[#C89049]">....-</code></div>
+            <div class="p-2 bg-[#161815] border border-[#454a42]"><strong>5:</strong> <code class="text-[#C89049]">.....</code></div>
+            <div class="p-2 bg-[#161815] border border-[#454a42]"><strong>6:</strong> <code class="text-[#C89049]">-....</code></div>
+            <div class="p-2 bg-[#161815] border border-[#454a42]"><strong>7:</strong> <code class="text-[#C89049]">--...</code></div>
+            <div class="p-2 bg-[#161815] border border-[#454a42]"><strong>8:</strong> <code class="text-[#C89049]">---..</code></div>
+            <div class="p-2 bg-[#161815] border border-[#454a42]"><strong>9:</strong> <code class="text-[#C89049]">----.</code></div>
+            <div class="p-2 bg-[#161815] border border-[#454a42]"><strong>0:</strong> <code class="text-[#C89049]">-----</code></div>
+          </div>
+        </div>
+
+        <div class="vintage-instrument p-4 space-y-2">
+          <h4 class="font-mono-tech text-xs font-bold uppercase text-[#8BA88A] tracking-wider">3. QUẢN LÝ CA TRỰC</h4>
+          <p>Thu bản tin khi sóng đủ mạnh. Mỗi bản tin mới hồi 7% pin; quét sóng tốn 3% pin. Đừng giữ nút thu khi chưa bắt đúng sóng vì máy vẫn tiêu thụ điện và nóng lên.</p><p>Máy quá nóng sẽ ngắt cầu chì 8 giây và mất 8% pin. Tắt PWR để sạc và làm nguội, hoặc dùng một trong 3 bình làm mát. Bão từ xuất hiện định kỳ; theo dõi cảnh báo trên bảng ca trực.</p><p>Hết giờ hoặc hết pin sẽ kết thúc ca trực. Nhấn Esc để tạm dừng. Hồ sơ và menu tự dừng đồng hồ; tiến độ được lưu trên trình duyệt này.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- FINAL EPILOGUE VICTORY MODAL ("THE LAST FREQUENCY" UNLOCKED)          -->
+  <!-- ===================================================================== -->
+  <div id="victory-modal" class="fixed inset-0 z-50 bg-black/85 hidden items-center justify-center p-4">
+    <div class="panel-phosphor screw-corners max-w-xl w-full p-6 sm:p-8 space-y-5 border-2 border-[#8BA88A]">
+      <div class="flex items-center justify-between border-b border-[#72765C] pb-3">
+        <span class="worn-label text-[#8BA88A]">BỨC ĐIỆN ĐÃ GIẢI MÃ // 9.65 MHz</span>
+        <span class="worn-label-brass px-2 py-0.5 text-xs">NHIỆM VỤ HOÀN TẤT</span>
+      </div>
+
+      <h2 class="font-editorial text-3xl sm:text-4xl font-bold text-[#E0D8C1] engraved-text">
+        Bức Điện Bình Minh — Dự Án CHRONOS
+      </h2>
+
+      <div class="paper-document p-4 font-typewriter text-xs sm:text-sm leading-relaxed space-y-3">
+        <div class="flex justify-between items-center border-b border-[#795843]/30 pb-1 text-[10px] font-bold text-[#795843]">
+          <span>BẢN GHI VIỄN ẤN // TRẠM CHỈ HUY CHRONOS [74°N]</span>
+          <span class="ink-stamp">VERIFIED 7429</span>
+        </div>
+        <p>
+          "Gửi người trực đài cuối cùng trên dải sóng ngắn Bắc Bán Cầu: Mã ủy quyền <strong>7429</strong> của bạn đã đồng bộ hóa mạng lưới khiên từ trường giữa Trạm Borealis, Tàu Orpheus, Tháp K-19 và Vệ tinh Helios-4."
+        </p>
+        <p>
+          "Cơn bão từ cực đại đã đi qua đỉnh điểm. Khi bình minh lên sau khung cửa sổ mưa, các kênh liên lạc dân sự sẽ phục hồi. Cảm ơn bạn đã giữ cho ngọn đèn tần số cuối cùng không tắt trong đêm tối."
+        </p>
+        <p class="text-[#795843] text-xs font-bold">
+          — KẾT THÚC BẢN GHI // TẦN SỐ ĐỒNG BỘ 9.65 MHz
+        </p>
+      </div>
+
+      <div id="victory-score" class="victory-report"></div>
+      <div class="flex flex-col sm:flex-row gap-3 pt-2">
+        <button id="btn-continue-freeplay" class="btn-analog active-phosphor flex-1 py-2.5 px-4 font-mono-tech text-xs font-bold uppercase">
+          TIẾP TỤC TRỰC BÀN MÁY
+        </button>
+        <button id="btn-replay-reset" class="btn-analog py-2.5 px-4 font-mono-tech text-xs uppercase">
+          XÓA BĂNG & CHƠI LẠI TỪ ĐẦU
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- APPLICATION LOGIC: STATE, WEB AUDIO SYNTH, THREE.JS R160 SCENE        -->
+  <!-- ===================================================================== -->
+  <script type="module" src="/src/main.js"></script>
+
+</body>
+</html>

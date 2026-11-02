@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* NIGHT SHIFT: operational console. Local fonts and dependencies, no CDN requests. */
+:root { color-scheme: dark; }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #edbd70; outline-offset: 3px; }
+button:disabled { opacity: .4; cursor: not-allowed; }
+#intro-overlay { overflow-y: auto; }
+#intro-overlay > div { margin: auto; }
+.shift-brief { margin: 0 0 18px; font: 11px/1.65 'IBM Plex Mono', monospace; color: #c6bda5; }
+.shift-brief label { display: block; font-size: 9px; letter-spacing: .18em; color: #b69563; }
+.shift-brief select { width: 100%; padding: 10px; background: #171c18; border: 1px solid #6d7058; color: #e0d8c1; margin: 6px 0; }
+#resume-notice { color: #a8c6a0; }
+#mission-panel { position: fixed; z-index: 25; top: 142px; left: 16px; width: 304px; max-height: calc(100dvh - 282px); overflow: auto; padding: 17px; color: #d7cfb9; border: 1px solid #64664e; border-top: 3px solid #b49460; background: linear-gradient(125deg,#30372edb,#1b211df5 60%),#202620; box-shadow: 0 12px 48px #0007, inset 0 0 0 3px #171b1799; font: 10px/1.5 'IBM Plex Mono', 'Courier New', monospace; scrollbar-width: thin; }
+.shift-heading { display: flex; justify-content: space-between; align-items: center; color: #9fba91; font-size: 9px; letter-spacing: .05em; }
+.shift-heading i { display: inline-block; width: 5px; height: 5px; background: #9fc797; border-radius: 50%; margin-right: 5px; box-shadow: 0 0 8px #adce87; }
+.shift-heading button { border: 1px solid #626853; padding: 4px 6px; color: #b9b59d; background: #20251d; }
+.shift-clock { display: flex; justify-content: space-between; margin: 16px 0 12px; gap: 12px; }
+.shift-clock small { display: block; font-size: 8px; letter-spacing: .1em; color: #9c9d82; }
+.shift-clock strong { display: block; font-size: 37px; font-weight: 500; letter-spacing: -.05em; line-height: 1.25; color: #e0b47b; font-variant-numeric: tabular-nums; }
+.shift-score { text-align: right; }
+.shift-score b { font-size: 21px; display: block; color: #e5dcc7; font-weight: 400; }
+.shift-score span { display: block; color: #a2bd93; font-size: 8px; }
+.storm-strip { border: 1px solid #53634e; padding: 7px; background: #151f17; color: #a5bc94; font-size: 9px; letter-spacing: .04em; }
+.storm-strip.warning { background: #3a2c1e; color: #f0b66b; border-color: #b58b4f; }
+.storm-strip.danger { background: #3b231d; color: #f0a58d; border-color: #b86e51; }
+.shift-resources { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 14px 0; border-bottom: 1px solid #555a45; }
+.shift-resources label { font-size: 9px; color: #a7a68e; }
+.shift-resources b { float: right; color: #d5c3a0; font-weight: 400; }
+.shift-resources meter { display: block; width: 100%; height: 7px; margin-top: 6px; appearance: none; background: #101810; border: 0; }
+meter::-webkit-meter-bar { background: #101810; border: none; border-radius: 0; }
+meter::-webkit-meter-optimum-value { background: #9caa79; }
+#heat-meter::-webkit-meter-optimum-value { background: #bf925f; }
+#mission-panel.resource-danger .shift-resources b { color: #f39c79; }
+.mission-order { padding: 14px 0 12px; }
+.mission-order small { color: #b49460; font-size: 8px; letter-spacing: .2em; }
+.mission-order p { margin-top: 6px; line-height: 1.65; color: #d4d4bc; min-height: 48px; }
+.antenna-label { display: block; color: #939e86; font-size: 9px; }
+.antenna-label b { float: right; color: #d4b274; font-weight: 400; }
+#antenna { width: 100%; accent-color: #c7ab70; margin: 10px 0 3px; height: 14px; cursor: ew-resize; }
+.antenna-scale { display: flex; justify-content: space-between; font-size: 7px; color: #9c9e86; }
+.record-readout { display: flex; justify-content: space-between; margin: 15px 0 6px; color: #b9c4a3; font-size: 8px; }
+.capture-track { background: #111810; height: 5px; border: 1px solid #49513d; margin-bottom: 10px; }
+#capture-fill { height: 100%; background: #b7c69a; width: 0; }
+.capture-button { width: 100%; background: linear-gradient(#ab8050,#89633b); color: #11180f; font-weight: bold; font-size: 10px; padding: 13px 6px; border: 1px solid #d2ad73; box-shadow: inset 0 0 0 2px #6f522e; touch-action: none; user-select: none; }
+.capture-button:active, .capture-button.receiving { background: #c4ce9a; box-shadow: 0 0 18px #b0c87a33; }
+kbd { font-family: inherit; font-size: 8px; opacity: .7; margin-left: 5px; }
+.shift-actions { display: flex; gap: 8px; margin: 10px 0; }
+.shift-actions button { flex: 1; border: 1px solid #656950; background: #252d23; padding: 8px 2px; color: #ccc6ad; font-size: 9px; }
+.shift-actions small { display: block; color: #8d9b80; font-size: 8px; margin-top: 3px; }
+#mission-feedback { color: #b6b79b; min-height: 30px; font-size: 9px; line-height: 1.6; }
+.shift-footer { display: flex; justify-content: space-between; border-top: 1px solid #4b543f; margin-top: 10px; padding-top: 8px; color: #909b80; font-size: 7px; letter-spacing: .05em; }
+.shift-overlay { position: fixed; inset: 0; z-index: 70; background: #0b100eed; backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.shift-overlay[hidden] { display: none; }
+.shift-modal-card { width: 480px; max-width: 100%; padding: 36px; background: #282f25; border: 1px solid #8f875f; box-shadow: 0 25px 100px #0008; color: #dad3b9; }
+.shift-modal-card > small { color: #ae9566; font: 9px monospace; letter-spacing: .14em; }
+.shift-modal-card h2 { font: 35px/1.2 Georgia,serif; margin: 20px 0 15px; }
+.shift-modal-card p { font: 12px/1.8 monospace; color: #a8b29b; }
+.shift-modal-card button { display: block; width: 100%; border: 1px solid #8f906c; margin-top: 12px; padding: 13px; font: 11px monospace; }
+#btn-resume { background: #b5b687; color: #1a2118; }
+#btn-new-shift { color: #c6c3a6; }
+#mission-summary, .victory-report { margin: 20px 0; padding: 15px; background: #141d14; color: #b4c696; font: 12px/1.9 monospace; border-left: 2px solid #a4af78; }
+#victory-modal, #help-modal, #settings-modal { overflow-y: auto; }
+#victory-modal > div { max-height: 90dvh; overflow-y: auto; }
+@media (max-width: 1000px) and (min-width: 641px) { #mission-panel { width: 260px; left: 10px; padding: 12px; top: 150px; } }
+@media (max-width: 640px) {
+  #equipment-header { display: none; }
+  #receiver-hud { width: 100%; min-width: 0; padding: 8px 12px; }
+  #receiver-hud #lock-container { display: none !important; }
+  #receiver-hud > div:first-child { margin-bottom: 5px; padding-bottom: 3px; }
+  #mission-panel { top: 155px; left: 10px; width: calc(100% - 20px); max-height: calc(100dvh - 350px); padding: 12px 15px; }
+  .shift-clock { margin: 8px 0; }
+  .shift-clock strong { font-size: 29px; }
+  .shift-resources { padding: 10px 0; }
+  .mission-order { padding: 10px 0; }
+  .mission-order p { min-height: auto; }
+  #radio-controls .xl\:flex { display: none; }
+  #radio-controls > div:last-child { gap: 7px; }
+  #radio-controls button { padding: 8px 7px; font-size: 9px; }
+  #station-chips { max-height: 48px; overflow-y: auto; }
+  #transmission-banner { position: fixed; left: 10px; right: 10px; top: 155px; max-height: calc(100dvh - 350px); width: auto; overflow-y: auto; z-index: 28; }
+  #transmission-banner::after { content: 'Đổi tần số để thu trạm tiếp theo.'; display: block; margin-top: 8px; color: #a9bd98; font: 10px monospace; }
+  #intro-overlay h1 { font-size: 31px; }
+  #intro-overlay > div { padding: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+.shift-modal-card button[hidden] { display: none; }

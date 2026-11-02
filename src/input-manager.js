@@ -5,6 +5,7 @@ export function keyboardAction(event, blocked = false) {
   const el = event.target;
   if (el?.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(el?.tagName)) return null;
   if (event.code === 'Space') {
+    if (event.repeat) return null;
     const control=el?.closest?.('button, a, [role="button"]');
     return control && control.id!=='btn-capture' ? null : 'capture';
   }
@@ -12,7 +13,7 @@ export function keyboardAction(event, blocked = false) {
   if (event.repeat && !['arrowleft','arrowright','a','d'].includes(key)) return null;
   return ({ p:'power', m:'mute', j:'journal', k:'workbench', r:'scan', c:'coolant', arrowleft:'left', a:'left', arrowright:'right', d:'right' })[key] || null;
 }
-export function setupInputManager({ overlays, escape, actions, release, blur, visibility }, win = window, doc = document) {
+export function setupInputManager({ overlays, escape, actions, release, releaseKeyboard = release, blur, visibility }, win = window, doc = document) {
   win.addEventListener('keydown', event => {
     overlays.handleTab(event);
     const action = keyboardAction(event, Boolean(overlays.top()));
@@ -21,7 +22,7 @@ export function setupInputManager({ overlays, escape, actions, release, blur, vi
     if (action === 'escape') escape();
     else actions[action]?.(event);
   });
-  win.addEventListener('keyup', event => { if (event.code === 'Space') release(); });
+  win.addEventListener('keyup', event => { if (event.code === 'Space') releaseKeyboard(); });
   win.addEventListener('blur', () => { release(); blur(); });
   doc.addEventListener('visibilitychange', () => { release(); visibility(doc.hidden); });
   doc.addEventListener('focusin', event => overlays.containFocus(event));
@@ -40,4 +41,11 @@ export function pointerCoordinates(x, y, rect) {
 export function accumulateDrag(value, type, dx, dy, fine = false, touch = false) {
   const next=value+dragDelta(type,dx,dy,fine,touch);
   return Math.max(type==='volume'?0:3,Math.min(type==='volume'?1:12,next));
+}
+
+export function ownsPointer(ownerId, event) {
+  return Number.isInteger(ownerId) && ownerId===event?.pointerId;
+}
+export function smoothApproach(value,target,rate,seconds){
+  return value+(target-value)*(1-Math.exp(-rate*Math.max(0,seconds)));
 }

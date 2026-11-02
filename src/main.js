@@ -1,7 +1,14 @@
+import { MissionClock, STALL_THRESHOLD } from './mission-clock.js';
+import { evaluateReception, receptionText } from './reception.js';
+const missionClock=new MissionClock();
+let clockUpdating=false;
+let keyboardCaptureHeld=false;
+let lastTelemetryPaint=-Infinity, lastHudPaint=-Infinity;
+let telemetryPaints=0, hudPaints=0;
 import { createOverlayManager, escapeAction } from './overlay-manager.js';
-import { setupInputManager, accumulateDrag, pointerCoordinates } from './input-manager.js';
+import { setupInputManager, accumulateDrag, pointerCoordinates, ownsPointer, smoothApproach } from './input-manager.js';
 import { STORAGE_KEY, readGameSave, writeGameSave, importLegacySave } from './storage.js';
-import { frameRadio } from './camera-framing.js';
+import { frameRadio, radioPixelRatio } from './camera-framing.js';
 let overlays;
 let storageSession;
 let archive = null;
@@ -10,7 +17,7 @@ let pendingSaveTimer = null;
 let lastStorageWrite = -Infinity;
 let capturePointerId = null;
 import { setupMobileLayout } from './mobile-layout.js';
-import { CHANNELS, DIFFICULTIES, createMission, restoreMission, stormAt, carrierFrequency, antennaGain, captureDuration, tickMission, scan, useCoolant, submitCode } from './mission.js';
+import { CHANNELS, DIFFICULTIES, createMission, restoreMission, stormAt, carrierFrequency, antennaGain, captureDuration, scan, useCoolant, submitCode } from './mission.js';
 let mission = createMission();
 let holdingCapture = false;
 let lastMissionSave = 0;
@@ -398,7 +405,7 @@ import './styles.css';
         if (this.schedulerTimer) clearInterval(this.schedulerTimer);
         this.schedulerTimer = setInterval(() => {
           if (!this.initialized || !this.ctx || document.hidden) return;
-          if (!state.powerOn || state.muted || isAnyOverlayOpen() || state.signalStrength < 0.22) {
+          if (!state.powerOn || state.muted || isAnyOverlayOpen() || !['playing','won'].includes(mission.status) || state.signalStrength < 0.22) {
             this.nextEventTime = this.ctx.currentTime + 0.05;
             return;
           }
@@ -582,7 +589,7 @@ import './styles.css';
 
       // Soft distant thunder rumble synchronized with lightning flash
       playDistantThunder() {
-        if (!this.initialized || !this.ctx || state.muted || document.hidden) return;
+        if (!this.initialized || !this.ctx || state.muted || document.hidden || isAnyOverlayOpen() || !['playing','won'].includes(mission.status)) return;
         const now = this.ctx.currentTime;
         const osc = this.ctx.createOscillator();
         const g = this.ctx.createGain();
@@ -601,6 +608,7 @@ import './styles.css';
         lp.connect(g);
         g.connect(this.limiter);
         osc.start(now);
+        osc.onended=()=>{osc.disconnect();lp.disconnect();g.disconnect();};
         osc.stop(now + 2.15);
       }
 
@@ -620,6 +628,7 @@ import './styles.css';
         osc.connect(g);
         g.connect(this.limiter);
         osc.start(now);
+        osc.onended=()=>{osc.disconnect();g.disconnect();};
         osc.stop(now + 0.05);
       }
 
@@ -636,6 +645,7 @@ import './styles.css';
         osc.connect(g);
         g.connect(this.limiter);
         osc.start(now);
+        osc.onended=()=>{osc.disconnect();g.disconnect();};
         osc.stop(now + 0.02);
       }
 
@@ -655,6 +665,7 @@ import './styles.css';
           osc.connect(g);
           g.connect(this.limiter);
           osc.start(now + idx * 0.11);
+          osc.onended=()=>{osc.disconnect();g.disconnect();};
           osc.stop(now + idx * 0.11 + 0.4);
         });
       }
@@ -760,6 +771,9 @@ import './styles.css';
         renderer.domElement.addEventListener('webglcontextlost', (event) => {
           event.preventDefault();
           webglAvailable = false;
+          releaseAllInput();
+          const fallback=document.getElementById('radio-fallback');
+          fallback.hidden=false;fallback.textContent='CHẾ ĐỘ HUD · Đồ họa đang khôi phục. Thanh dò, anten và nút thu vẫn hoạt động.';
           document.body.classList.remove('webgl-ready');
           const errBox = document.getElementById('webgl-error-box');
           if (errBox) {
@@ -771,6 +785,7 @@ import './styles.css';
         renderer.domElement.addEventListener('webglcontextrestored', () => {
           webglAvailable = true;
           document.body.classList.add('webgl-ready');
+          document.getElementById('radio-fallback').hidden=true;
           const errBox = document.getElementById('webgl-error-box');
           if (errBox) errBox.classList.add('hidden');
           drawFrequencyDialCanvas(state.powerOn);
@@ -1831,7 +1846,8 @@ import './styles.css';
       }
     }
 
-    function endKnobDrag() {
+    function endKnobDrag(event) {
+      if (event && !ownsPointer(activePointerId,event)) return;
       if (!activeDragType) return;
       const id=activePointerId; activeDragType=null; activePointerId=null;
       if (renderer?.domElement && id!==null && renderer.domElement.hasPointerCapture(id)) renderer.domElement.releasePointerCapture(id);
@@ -1850,6 +1866,7 @@ import './styles.css';
     let activeTranscriptTimer = null;
 
     function togglePower() {
+      if(!clockUpdating){updateMission();if(mission.status==='lost' && !state.powerOn)return;}
       if (mission.trip > 0 && !state.powerOn) return;
       state.powerOn = !state.powerOn;
       audio.playMechanicalClick(state.powerOn ? 280 : 170);
@@ -1866,14 +1883,17 @@ import './styles.css';
 
       drawFrequencyDialCanvas(state.powerOn);
       audio.updateAudioState();
-      updateHUD();
+      updateHUD(undefined,true);
+      renderMissionPanel(true);
       saveProgress();
     }
 
     function setTargetFrequency(newFreq) {
+      if(!clockUpdating){updateMission();if(mission.status==='lost')return;}
       const clamped = THREE.MathUtils.clamp(newFreq, 3.00, 12.00);
       state.targetFrequency = Math.round(clamped * 100) / 100;
       state.lastTuneTimestamp = performance.now();
+      missionClock.noteInput(mission,readRadioInput());
       const sliderEl = document.getElementById('hud-freq-slider');
       if (sliderEl) sliderEl.value = Math.round(state.targetFrequency * 100);
     }
@@ -2017,10 +2037,10 @@ import './styles.css';
       document.getElementById('operator-note-status').textContent = '✓ ĐÃ TẠO BĂNG NHẬT KÝ .TXT';
     }
 
-    function updateRadioSimulation(dt, nowMs) {
+    function updateRadioSimulation(dt, nowMs, radioDt=dt) {
       // Smooth tube & CRT warm-up / cool-down curve
       const targetWarm = state.powerOn ? 1.0 : 0.0;
-      state.warmUpLevel = THREE.MathUtils.lerp(state.warmUpLevel, targetWarm, dt * (state.powerOn ? 3.2 : 6.0));
+      state.warmUpLevel = smoothApproach(state.warmUpLevel,targetWarm,state.powerOn?3.2:6,radioDt);
 
       // Animate 3D Power Toggle Switch
       if (powerSwitchPivot) {
@@ -2031,7 +2051,7 @@ import './styles.css';
       // Smoothly interpolate frequency with slight analog flywheel inertia
       const freqDiff = state.targetFrequency - state.frequency;
       if (Math.abs(freqDiff) > 0.0002) {
-        state.frequency += freqDiff * Math.min(1, dt * 14);
+        state.frequency = smoothApproach(state.frequency,state.targetFrequency,14,radioDt);
       } else {
         state.frequency = state.targetFrequency;
       }
@@ -2149,8 +2169,7 @@ import './styles.css';
       state.lockProgress = 2.0;
 
       const isFinal = station.id === FINAL_STATION.id;
-      audio.playSignalLockedChime(isFinal);
-      startProgressiveDemodulation(station);
+      if(mission.status!=='lost'){audio.playSignalLockedChime(isFinal);startProgressiveDemodulation(station);}
 
       if (!isFinal && !state.discoveredIds.includes(station.id)) {
         state.discoveredIds.push(station.id);
@@ -2193,11 +2212,13 @@ import './styles.css';
     const proximityToastEl = document.getElementById('proximity-toast');
     let hudNeedlePos = 2;
 
-    function updateHUD(nearestInfo) {
+    function updateHUD(nearestInfo,force=false) {
+      const now=performance.now();if(!force && now-lastHudPaint<100)return;
+      lastHudPaint=now;hudPaints++;
       btnHudPower.setAttribute('aria-pressed', String(state.powerOn));
-      hudFreqEl.textContent = state.frequency.toFixed(2);
+      writeNodeText(hudFreqEl,state.frequency.toFixed(2));
       const sigPct = Math.round(state.signalStrength * 100);
-      hudSigPctEl.textContent = `${sigPct}%`;
+      writeNodeText(hudSigPctEl,`${sigPct}%`);
       hudSigBarEl.style.width = `${sigPct}%`;
 
       // Physical HUD S-Meter needle with inertia & subtle static micro-tremor
@@ -2212,14 +2233,14 @@ import './styles.css';
         hudSmeterNeedleEl.style.left = `${hudNeedlePos.toFixed(1)}%`;
       }
 
-      stateBadgeEl.textContent = state.radioState;
+      writeNodeText(stateBadgeEl,state.radioState);
 
       // Jewel Pilot Lamps & Power Switch appearance
       if (!state.powerOn) {
         statusLedEl.className = 'pilot-jewel lamp-off w-3.5 h-3.5 shrink-0';
         powerDotEl.className = 'pilot-jewel lamp-off w-2.5 h-2.5';
         btnHudPower.classList.remove('active-amber');
-        hudCallsignTagEl.textContent = 'OFFLINE';
+        writeNodeText(hudCallsignTagEl,'OFFLINE');
         hudCallsignTagEl.className = 'worn-label text-[9px] text-[#72765C]';
         lockContainerEl.classList.add('hidden');
         txBannerEl.classList.add('hidden');
@@ -2231,10 +2252,10 @@ import './styles.css';
       powerDotEl.className = 'pilot-jewel lamp-amber w-2.5 h-2.5';
 
       if (nearestInfo && nearestInfo.distance < 0.09 && nearestInfo.station) {
-        hudCallsignTagEl.textContent = nearestInfo.station.callsign;
+        writeNodeText(hudCallsignTagEl,nearestInfo.station.callsign);
         hudCallsignTagEl.className = 'worn-label text-[9px] text-[#8BA88A] border-[#8BA88A]/60';
       } else {
-        hudCallsignTagEl.textContent = 'STATIC NOISE';
+        writeNodeText(hudCallsignTagEl,'STATIC NOISE');
         hudCallsignTagEl.className = 'worn-label text-[9px] text-[#D7C8A5]/70';
       }
 
@@ -2250,10 +2271,10 @@ import './styles.css';
         const duration = captureDuration(mission, getNearestStationInfo(state.frequency).station.id);
         const pct = state.radioState === GAME_STATE.DECODED ? 100 : Math.min(100, (mission.progress / duration) * 100);
         hudLockBarEl.style.width = `${pct}%`;
-        lockTimerTextEl.textContent = `${mission.progress.toFixed(1)}s / ${duration.toFixed(1)}s`;
-        lockStatusTextEl.textContent = state.radioState === GAME_STATE.DECODED
+        writeNodeText(lockTimerTextEl,`${mission.progress.toFixed(1)}s / ${duration.toFixed(1)}s`);
+        writeNodeText(lockStatusTextEl,state.radioState === GAME_STATE.DECODED
           ? 'ĐÃ KHÓA TÍN HIỆU (SIGNAL LOCKED)'
-          : 'GIỮ SPACE / THU BẢN TIN...';
+          : 'GIỮ SPACE / THU BẢN TIN...');
       } else {
         lockContainerEl.classList.add('hidden');
       }
@@ -2261,9 +2282,9 @@ import './styles.css';
       // Transmission Banner when Decoded
       if (state.radioState === GAME_STATE.DECODED && state.activeStation) {
         txBannerEl.classList.remove('hidden');
-        txTitleEl.textContent = `${state.activeStation.freq.toFixed(2)} MHz — ${state.activeStation.name}`;
-        txCodeEl.textContent = state.activeStation.callsign;
-        txClueEl.textContent = `✓ Đã lưu vào Hồ sơ: ${state.activeStation.clueTitle}`;
+        writeNodeText(txTitleEl,`${state.activeStation.freq.toFixed(2)} MHz — ${state.activeStation.name}`);
+        writeNodeText(txCodeEl,state.activeStation.callsign);
+        writeNodeText(txClueEl,`✓ Đã lưu vào Hồ sơ: ${state.activeStation.clueTitle}`);
         proximityToastEl.classList.add('opacity-0');
       } else {
         txBannerEl.classList.add('hidden');
@@ -2477,6 +2498,8 @@ import './styles.css';
 
     // Verify the 4-digit puzzle answer (7 - 4 - 2 - 9) — Gated by all 5 stations discovered!
     function verifyChronosCode() {
+      updateMission();
+      if(mission.status!=='playing')return;
       audio.init();
       const entered = state.codeDigits.join('');
       const feedbackEl = document.getElementById('decoder-feedback');
@@ -2489,6 +2512,7 @@ import './styles.css';
       }
 
       const result = submitCode(mission, entered);
+      if(result==='lost'){handleMissionEvents([{type:'lost',reason:mission.reason}]);return;}
       if (result === 'locked') return;
       if (result === 'correct' || result === 'unlocked') {
         state.codeUnlocked = true;
@@ -2519,6 +2543,7 @@ import './styles.css';
       else if (mission.status === 'lost') showMissionModal();
       else mission.status = 'playing';
       if (!state.powerOn && ['playing','won'].includes(mission.status)) togglePower();
+      updateMission(performance.now());
       saveProgress();
 
     });
@@ -2704,7 +2729,8 @@ import './styles.css';
       e.target.textContent = state.highQuality ? 'CAO (HIGH)' : 'TIẾT KIỆM (LOW)';
       e.target.classList.toggle('active-amber', state.highQuality);
       if (renderer) {
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, state.highQuality ? 2 : 1));
+        renderer.shadowMap.enabled=state.highQuality;
+        resizeRadioStage();
       }
       saveProgress();
     });
@@ -2778,6 +2804,7 @@ import './styles.css';
       if (!renderer || !camera) return;
       const rect=container.getBoundingClientRect();
       if (rect.width<1 || rect.height<1) return;
+      renderer.setPixelRatio(radioPixelRatio(rect.width,rect.height,window.devicePixelRatio,state.highQuality));
       renderer.setSize(rect.width,rect.height);
       camera.aspect=rect.width/rect.height;
       if (radioBounds) {
@@ -2797,14 +2824,15 @@ import './styles.css';
 
     function animate() {
       requestAnimationFrame(animate);
-      const dt = Math.min(0.1, clock.getDelta());
+      const frameDelta=clock.getDelta();
+      const dt = Math.min(0.1,frameDelta);
       const elapsed = clock.elapsedTime;
       const nowMs = performance.now();
 
       const blocked = isAnyOverlayOpen() || document.hidden;
-      if (blocked) holdingCapture = false;
-      updateRadioSimulation(dt, nowMs);
-      if (!blocked) updateMission(dt);
+      if (blocked && holdingCapture) releaseCapture();
+      updateRadioSimulation(dt,nowMs,Math.min(frameDelta,STALL_THRESHOLD));
+      updateMission(nowMs);
       renderMissionPanel();
       if (mission.status === 'playing' && !blocked && nowMs-lastMissionSave > 1000) { saveProgress(); lastMissionSave = nowMs; }
       updateOscilloscopes(elapsed);
@@ -2869,7 +2897,7 @@ import './styles.css';
     }
 
     // Persist the final few signal samples when leaving the tab.
-    window.addEventListener('pagehide', () => saveProgress(true));
+    window.addEventListener('pagehide', () => {updateMission(performance.now(),false);saveProgress(true);});
 
     // Boot Application
     window.addEventListener('DOMContentLoaded', () => {
@@ -2914,77 +2942,89 @@ function initializeMissionUI() {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) state.reducedMotion = true;
   renderMissionPanel();
 }
-function updateMission(dt) {
-  const nearest = getNearestStationInfo(state.frequency);
-  const input = { powerOn: state.powerOn, holding: holdingCapture, stationId: nearest.station?.id,
-    stable: nearest.distance <= 0.032 && Math.abs(state.targetFrequency-state.frequency) < 0.005 && state.warmUpLevel > 0.85,
-    signal: state.signalStrength };
-  const events = tickMission(mission, dt, input);
+function readRadioInput() {
+  const nearest=getNearestStationInfo(state.frequency);
+  return {powerOn:state.powerOn,holding:holdingCapture,stationId:nearest.station?.id,distance:nearest.distance,
+    frequency:state.frequency,targetFrequency:state.targetFrequency,signal:state.signalStrength,warmUpLevel:state.warmUpLevel};
+}
+function updateMission(now=performance.now(),active=!isAnyOverlayOpen()&&!document.hidden) {
+  if(clockUpdating)return;
+  clockUpdating=true;
+  try {
+    const result=missionClock.advance(mission,now,active,readRadioInput());
+    handleMissionEvents(result.events);
+    if(result.stall && mission.status==='playing'){
+      feedback('Gián đoạn khung hình: đã tính thời gian và tài nguyên chờ; không ghi tín hiệu trong khoảng gián đoạn.');
+    }
+  }finally{clockUpdating=false;}
+}
+function handleMissionEvents(events) {
   for (const event of events) {
     if (event.type === 'captured' || event.type === 'won') {
-      holdingCapture = false;
+      releaseCapture();
       onStationLocked([...STATIONS, FINAL_STATION].find(s => s.id === event.id));
       feedback(event.type === 'won' ? 'ĐÃ PHÁT SOS. MẠNG LƯỚI ĐƯỢC KHÔI PHỤC.' : `Đã lưu ${CHANNELS.find(c => c.id === event.id).label}. +7% pin. Mở hồ sơ để đọc dữ kiện.`);
     } else if (event.type === 'overheat') {
-      holdingCapture = false;
+      releaseCapture();
       if (state.powerOn) togglePower();
       feedback('QUÁ NHIỆT! Cầu chì ngắt 8 giây. −8% pin. Dùng bình làm mát hoặc chờ máy nguội.');
       addOperatorEvent('QUÁ NHIỆT: cầu chì bảo vệ đã ngắt');
     } else if (event.type === 'lost') {
-      holdingCapture = false;
+      releaseCapture();
+      overlays.clear();
       if (state.powerOn) togglePower();
       showMissionModal();
     } else if (event.type === 'interrupted') feedback('Bản ghi mất đồng bộ. Căn lại sóng và anten trước khi giữ THU.');
   }
-  if (events.length) saveProgress();
+  if (events.length) saveProgress(events.some(event=>event.type==='lost'||event.type==='won'));
 }
-function renderMissionPanel() {
+function renderMissionPanel(force=false) {
+  const now=performance.now();if(!force && now-lastTelemetryPaint<100)return;
+  lastTelemetryPaint=now;telemetryPaints++;
   const d = DIFFICULTIES[mission.difficulty];
   const remaining = Math.max(0,Math.ceil(d.duration-mission.elapsed));
-  document.getElementById('mission-time').textContent = `${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;
-  document.getElementById('mission-score').textContent = String(mission.score).padStart(5,'0');
-  document.getElementById('mobile-log-count').textContent = `${mission.collected.length}/5`;
-  document.getElementById('mission-combo').textContent = mission.combo > 1 ? `CHUỖI ${mission.combo} · +${Math.min(5,mission.combo-1)*200}` : `${mission.collected.length}/5 BẢN TIN`;
-  document.getElementById('battery-value').textContent = `${Math.ceil(mission.battery)}%`;
+  writeText('mission-time',`${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`);
+  writeText('mission-score',String(mission.score).padStart(5,'0'));
+  writeText('mobile-log-count',`${mission.collected.length}/5`);
+  writeText('mission-combo',mission.combo > 1 ? `CHUỖI ${mission.combo} · +${Math.min(5,mission.combo-1)*200}` : `${mission.collected.length}/5 BẢN TIN`);
+  writeText('battery-value',`${Math.ceil(mission.battery)}%`);
   document.getElementById('battery-meter').value = mission.battery;
-  document.getElementById('heat-value').textContent = `${Math.round(mission.heat)}°C`;
+  writeText('heat-value',`${Math.round(mission.heat)}°C`);
   document.getElementById('heat-meter').value = mission.heat;
   document.getElementById('mission-panel').classList.toggle('resource-danger',mission.battery<20 || mission.heat>80);
-  document.getElementById('antenna-value').textContent = `${String(Math.round(mission.antenna)).padStart(3,'0')}°`;
-  document.getElementById('coolant-count').textContent = `${mission.coolant} BÌNH · −45°C`;
-  document.getElementById('mission-difficulty').textContent = d.label.toUpperCase();
+  writeText('antenna-value',`${String(Math.round(mission.antenna)).padStart(3,'0')}°`);
+  writeText('coolant-count',`${mission.coolant} BÌNH · −45°C`);
+  writeText('mission-difficulty',d.label.toUpperCase());
   const storm = stormAt(mission);
   const stormEl = document.getElementById('storm-status');
   stormEl.className = `storm-strip${storm.active ? ' danger' : storm.warning ? ' warning' : ''}`;
-  stormEl.textContent = mission.trip>0 ? `CẦU CHÌ NGẮT · CÒN ${Math.ceil(mission.trip)}S` : storm.active ? '⚡ BÃO TỪ · TRÔI SÓNG / NHIỆT TĂNG' : storm.warning ? `⚠ BÃO TỪ SAU ${Math.ceil(storm.next)} GIÂY` : `KHÍ QUYỂN ỔN ĐỊNH · BÃO SAU ${Math.ceil(storm.next)}S`;
+  writeNodeText(stormEl, mission.trip>0 ? `CẦU CHÌ NGẮT · CÒN ${Math.ceil(mission.trip)}S` : storm.active ? '⚡ BÃO TỪ · TRÔI SÓNG / NHIỆT TĂNG' : storm.warning ? `⚠ BÃO TỪ SAU ${Math.ceil(storm.next)} GIÂY` : `KHÍ QUYỂN ỔN ĐỊNH · BÃO SAU ${Math.ceil(storm.next)}S`);
   const phase = document.getElementById('mission-phase');
   const objective = document.getElementById('mission-objective');
   if (mission.status === 'won') {
-    phase.textContent='04 / BÌNH MINH'; objective.textContent='SOS được xác nhận. Mạng lưới đã phục hồi. Bạn có thể khám phá radio hoặc nhận ca mới.';
+    writeNodeText(phase,'04 / BÌNH MINH'); writeNodeText(objective,'SOS được xác nhận. Mạng lưới đã phục hồi. Bạn có thể khám phá radio hoặc nhận ca mới.');
   } else if (mission.unlocked) {
-    phase.textContent='03 / PHÁT TÍN HIỆU CUỐI'; objective.textContent='Lấy tần số HELIOS-4 trừ 1.75 MHz. Anten 80°. Giữ PHÁT SOS đủ 8 giây.';
+    writeNodeText(phase,'03 / PHÁT TÍN HIỆU CUỐI'); writeNodeText(objective,'Lấy tần số HELIOS-4 trừ 1.75 MHz. Anten 80°. Giữ PHÁT SOS đủ 8 giây.');
   } else if (mission.collected.length===5) {
-    phase.textContent='02 / GIẢI KHÓA CHRONOS'; objective.textContent='Đủ 5 bản tin. Mở HỒ SƠ & KHÓA SỐ, đối chiếu dữ kiện để tìm mã 4 số. Sai mã: −5% pin / −15 giây.';
+    writeNodeText(phase,'02 / GIẢI KHÓA CHRONOS'); writeNodeText(objective,'Đủ 5 bản tin. Mở HỒ SƠ & KHÓA SỐ, đối chiếu dữ kiện để tìm mã 4 số. Sai mã: −5% pin / −15 giây.');
   } else {
-    phase.textContent=`01 / THU THẬP · ${mission.collected.length}/5`;
+    writeNodeText(phase,`01 / THU THẬP · ${mission.collected.length}/5`);
     const next = CHANNELS.find(c => !mission.collected.includes(c.id));
-    objective.textContent = `Mục tiêu: ${next.label}, vùng ${(next.freq-.1).toFixed(1)}–${(next.freq+.1).toFixed(1)} MHz. Anten khoảng ${next.bearing}°. Thu các trạm theo thứ tự bất kỳ.`;
+    writeNodeText(objective,`Mục tiêu: ${next.label}, vùng ${(next.freq-.1).toFixed(1)}–${(next.freq+.1).toFixed(1)} MHz. Anten khoảng ${next.bearing}°. Thu các trạm theo thứ tự bất kỳ.`);
   }
   const nextTarget=CHANNELS.find(c=>!mission.collected.includes(c.id));
-  document.getElementById('mobile-objective-label').textContent=mission.unlocked?'CHRONOS · ANTEN 80°':mission.collected.length===5?'ĐỦ 5 BẢN TIN · MỞ KHÓA SỐ':`${nextTarget.label} · ${(nextTarget.freq-.1).toFixed(1)}–${(nextTarget.freq+.1).toFixed(1)} MHz · ${nextTarget.bearing}°`;
-  const nearest = getNearestStationInfo(state.frequency);
-  const channel = nearest.station;
-  const duration = captureDuration(mission, channel.id);
-  const pct = Math.min(100,Math.round(mission.progress/duration*100));
-  document.getElementById('capture-value').textContent = `${pct}%`;
-  document.getElementById('capture-fill').style.width = `${pct}%`;
-  const got = mission.collected.includes(channel.id);
-  const ready = state.powerOn && mission.trip<=0 && nearest.distance<=0.032 && state.signalStrength>=d.threshold;
-  document.getElementById('capture-status').textContent = mission.trip>0 ? 'CHỜ CẦU CHÌ PHỤC HỒI' : !state.powerOn ? 'BẬT PWR ĐỂ THU · ĐANG SẠC PIN' : got && nearest.distance<0.05 ? 'BẢN TIN ĐÃ LƯU · DÒ TRẠM TIẾP' : ready ? `TÍN HIỆU TỐT · GIỮ THU ${duration}S` : nearest.distance<0.08 ? 'CĂN ANTEN / TINH CHỈNH ±0.01 MHz' : 'DÒ SÓNG VỀ VÙNG NHIỆM VỤ';
-  const btn = document.getElementById('btn-capture');
-  btn.disabled = mission.status !== 'playing' || !state.powerOn || mission.trip>0 || (got && nearest.distance<0.05);
+  writeText('mobile-objective-label',mission.unlocked?'CHRONOS · ANTEN 80°':mission.collected.length===5?'ĐỦ 5 BẢN TIN · MỞ KHÓA SỐ':`${nextTarget.label} · ${(nextTarget.freq-.1).toFixed(1)}–${(nextTarget.freq+.1).toFixed(1)} MHz · ${nextTarget.bearing}°`);
+  const reception=evaluateReception(mission,readRadioInput());
+  const channel=reception.targetStation;
+  const duration=reception.captureDuration || 1;
+  const pct=Math.min(100,Math.round(mission.progress/duration*100));
+  writeText('capture-value',`${pct}%`);
+  const fill=document.getElementById('capture-fill');if(fill.style.width!==`${pct}%`)fill.style.width=`${pct}%`;
+  writeText('capture-status',receptionText(reception));
+  const btn=document.getElementById('btn-capture');
+  btn.disabled=['terminal','inactive','trip','off','locked','collected','invalid'].includes(reception.reason);
   btn.classList.toggle('receiving',holdingCapture);
-  const captureLabel = channel.id === 'chronos_final' ? '◉ GIỮ ĐỂ PHÁT SOS <kbd>SPACE</kbd>' : '● GIỮ ĐỂ THU BẢN TIN <kbd>SPACE</kbd>';
+  const captureLabel = channel?.id === 'chronos_final' ? '◉ GIỮ ĐỂ PHÁT SOS <kbd>SPACE</kbd>' : '● GIỮ ĐỂ THU BẢN TIN <kbd>SPACE</kbd>';
   if (btn.innerHTML !== captureLabel) btn.innerHTML = captureLabel;
   document.getElementById('btn-scan').disabled = mission.status !== 'playing' || mission.scanCooldown>0 || mission.battery<=3 || mission.trip>0;
   const scanButton = document.getElementById('btn-scan');
@@ -3007,6 +3047,8 @@ function showMissionModal() {
 }
 function pauseMission() {
   if (mission.status !== 'playing') return;
+  updateMission(performance.now(),false);
+  if(mission.status!=='playing')return;
   releaseAllInput(); mission.status='paused'; saveProgress(); showMissionModal(); audio.updateAudioState();
 }
 function resumeMission() {
@@ -3021,6 +3063,7 @@ function showVictoryReport() {
   overlays.open('victory');
 }
 function runScan() {
+  updateMission();
   if (!state.powerOn || isAnyOverlayOpen()) { feedback('Bật PWR trước khi quét sóng.'); return; }
   const channel=scan(mission);
   if (!channel) return;
@@ -3031,18 +3074,24 @@ function runScan() {
   renderStationChips(); audio.playMechanicalClick(400); saveProgress();
 }
 function coolMachine() {
+  updateMission();
   if (isAnyOverlayOpen() || !useCoolant(mission)) return;
   feedback('Đã thay bình làm mát: −45°C.'); audio.playMechanicalClick(180); saveProgress();
 }
 const captureButton=document.getElementById('btn-capture');
 captureButton.addEventListener('pointerdown',e=>{
-  if (captureButton.disabled || isAnyOverlayOpen()) return;
-  e.preventDefault(); capturePointerId=e.pointerId; captureButton.setPointerCapture(e.pointerId); holdingCapture=true; audio.init();
+  if (captureButton.disabled || isAnyOverlayOpen() || mission.status!=='playing' || capturePointerId!==null) return;
+  updateMission();if(mission.status!=='playing')return;
+  e.preventDefault(); capturePointerId=e.pointerId; captureButton.setPointerCapture(e.pointerId); refreshCaptureHold();missionClock.noteInput(mission,readRadioInput());audio.init();
 });
-function releaseCapture() {
-  holdingCapture=false;
+function refreshCaptureHold(){holdingCapture=keyboardCaptureHeld || capturePointerId!==null;captureButton.classList.toggle('receiving',holdingCapture);}
+function releaseCapture(event) {
+  if(event && !ownsPointer(capturePointerId,event))return;
+  if(holdingCapture && !clockUpdating)updateMission();
+  if(!event)keyboardCaptureHeld=false;
   const id=capturePointerId; capturePointerId=null;
   if(id!==null && captureButton.hasPointerCapture(id)) captureButton.releasePointerCapture(id);
+  refreshCaptureHold();missionClock.noteInput(mission,readRadioInput());
 }
 function releaseAllInput() { releaseCapture(); endKnobDrag(); }
 captureButton.addEventListener('lostpointercapture', releaseCapture);
@@ -3072,16 +3121,17 @@ const journalDefinition = { element:journalDrawer, backdrop:journalBackdrop, ini
   hide(){ journalDrawer.hidden=true; journalBackdrop.classList.add('hidden','opacity-0'); journalDrawer.classList.add('translate-y-full','sm:translate-x-full'); } };
 overlays=createOverlayManager({intro:definition('intro-overlay'),journal:journalDefinition,settings:definition('settings-modal','#btn-close-settings'),
   help:definition('help-modal','#btn-close-help'),victory:definition('victory-modal','#btn-continue-freeplay'),mission:definition('mission-modal')},
-  ()=>{ releaseAllInput(); audio.updateAudioState(); });
+  ()=>{ releaseAllInput();updateMission();audio.updateAudioState();renderMissionPanel(true); });
 setupInputManager({overlays,
   escape(){ const action=escapeAction(overlays.stack(),mission.status);
     if(action.type==='close') overlays.close(action.id);
     else if(action.type==='pause') pauseMission(); else if(action.type==='resume') resumeMission(); },
   actions:{ power(){audio.init();togglePower();},mute:toggleMute,journal:()=>openJournalDrawer(),workbench:()=>openJournalDrawer('tab-workbench'),scan:runScan,coolant:coolMachine,
-    capture(){if(!captureButton.disabled && mission.status==='playing') holdingCapture=true;},
+    capture(){updateMission();if(!captureButton.disabled && mission.status==='playing'){keyboardCaptureHeld=true;refreshCaptureHold();missionClock.noteInput(mission,readRadioInput());}},
     left(e){setTargetFrequency(state.targetFrequency-(e.shiftKey?.01:.03));saveProgress();},
     right(e){setTargetFrequency(state.targetFrequency+(e.shiftKey?.01:.03));saveProgress();} },
   release:releaseAllInput,
+  releaseKeyboard(){updateMission();keyboardCaptureHeld=false;refreshCaptureHold();missionClock.noteInput(mission,readRadioInput());},
   blur(){if(!isAnyOverlayOpen())pauseMission();},
   visibility(hidden){if(hidden){pauseMission();saveProgress(true);audio.ctx?.suspend().catch(()=>{});}
     else if(state.powerOn && !isAnyOverlayOpen())audio.ctx?.resume().catch(()=>{});}
@@ -3103,7 +3153,7 @@ document.getElementById('btn-import-legacy').addEventListener('click',()=>{
   const quality=document.getElementById('btn-quality-toggle');quality.textContent=state.highQuality?'CAO (HIGH)':'TIẾT KIỆM (LOW)';quality.classList.toggle('active-amber',state.highQuality);
   const motion=document.getElementById('btn-reduced-motion');motion.textContent=state.reducedMotion?'BẬT (ON)':'TẮT';motion.classList.toggle('active-amber',state.reducedMotion);
   const mute=document.getElementById('btn-mute-toggle');mute.textContent=state.muted?'ĐANG TẮT TIẾNG (MUTED)':'ĐANG BẬT TIẾNG';mute.classList.toggle('active-amber',state.muted);
-  if(renderer){renderer.setPixelRatio(Math.min(devicePixelRatio||1,state.highQuality?2:1.15));renderer.shadowMap.enabled=state.highQuality;}
+  if(renderer){renderer.shadowMap.enabled=state.highQuality;resizeRadioStage();}
 
 });
 document.getElementById('btn-decline-legacy').addEventListener('click',()=>{
@@ -3117,11 +3167,14 @@ export function getRadioDiagnostics() {
     const v=mesh.getWorldPosition(new THREE.Vector3());v.z+=.06;v.project(camera);
     controls[id]={x:rect.left+(v.x+1)*rect.width/2,y:rect.top+(1-v.y)*rect.height/2};
   }
-  return {webgl:webglAvailable,controls,frequency:state.frequency,targetFrequency:state.targetFrequency,volume:state.volume,powerOn:state.powerOn,
-    missionStatus:mission.status,holdingCapture,drag:activeDragType,knobRotation:tuningKnobMesh?.rotation.z,volumeRotation:volumeKnobMesh?.rotation.z,
+  return {webgl:webglAvailable,controls,highQuality:state.highQuality,pixelRatio:renderer?.getPixelRatio(),shadows:renderer?.shadowMap.enabled,frequency:state.frequency,targetFrequency:state.targetFrequency,volume:state.volume,powerOn:state.powerOn,
+    missionStatus:mission.status,missionElapsed:mission.elapsed,battery:mission.battery,heat:mission.heat,progress:mission.progress,reason:mission.reason,holdingCapture,capturePointerId,keyboardCaptureHeld,activePointerId,drag:activeDragType,reception:evaluateReception(mission,readRadioInput()),telemetryPaints,hudPaints,knobRotation:tuningKnobMesh?.rotation.z,volumeRotation:volumeKnobMesh?.rotation.z,
     powerRotation:powerSwitchPivot?.rotation.x,audioState:audio.ctx?.state,audioTime:audio.ctx?.currentTime,
     audioGain:audio.masterGain?.gain.value,rainGain:audio.rainGain?.gain.value,audioInitialized:audio.initialized,schedulerActive:Boolean(audio.schedulerTimer),renderFrames,
     scopeVersion:scopeTexture?.version,textures:renderer?.info.memory.textures,geometries:renderer?.info.memory.geometries,overlay:overlays.top()};
 }
 
 if (import.meta.env.DEV) Object.defineProperty(window,'__radioDiagnostics',{value:getRadioDiagnostics,configurable:true});
+
+function writeNodeText(node,value){if(node.textContent!==String(value))node.textContent=String(value);}
+function writeText(id,value){writeNodeText(document.getElementById(id),value);}

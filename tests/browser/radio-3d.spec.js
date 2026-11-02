@@ -1,7 +1,12 @@
 import {test,expect} from '@playwright/test';import {browserLaunch} from '../browser-launch.js';
 test.use({launchOptions:browserLaunch(true)});
 const diag=page=>page.evaluate(()=>window.__radioDiagnostics());
-async function ready(page){await page.goto('/');await page.locator('#btn-start-session').click();await expect(page.locator('#intro-overlay')).toBeHidden();
+async function ready(page){
+ // Supported saved Low Quality preference keeps CPU SwiftShader interaction tests within the stall policy.
+ await page.addInitScript(()=>localStorage.setItem('the_last_frequency_save_v3',JSON.stringify({highQuality:false,mission:{version:3,difficulty:'operator',status:'briefing'}})));
+ await page.goto('/');
+ await expect.poll(async()=>{const d=await diag(page);return d.webgl&&d.renderFrames>=3;},{timeout:30000}).toBe(true);
+ await page.locator('#btn-start-session').click();await expect(page.locator('#intro-overlay')).toBeHidden();
  await expect.poll(async()=>{const d=await diag(page);return d.webgl&&d.renderFrames>=3;},{timeout:30000}).toBe(true);}
 async function drag(page,type,touch,dx){
  const d=await diag(page),p=d.controls[type];
@@ -18,6 +23,9 @@ for(const [width,height] of [[320,568],[360,640],[390,844],[414,896],[667,375],[
   test.setTimeout(120000);const touch=width<1000;
   const context=await browser.newContext({baseURL:'http://127.0.0.1:5173',viewport:{width,height},hasTouch:touch,isMobile:touch});
   const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await ready(page);
+  const buffer=await page.locator('#canvas-container canvas').evaluate(el=>({width:el.width,height:el.height}));
+  expect(buffer.width*buffer.height).toBeLessThanOrEqual(360000);
+  await test.info().attach('render-buffer.json',{body:JSON.stringify(buffer),contentType:'application/json'});
   const before=await diag(page);const rect=await page.locator('#canvas-container canvas').boundingBox();
   for(const p of Object.values(before.controls)){expect(p.x).toBeGreaterThan(rect.x);expect(p.x).toBeLessThan(rect.x+rect.width);expect(p.y).toBeGreaterThan(rect.y);expect(p.y).toBeLessThan(rect.y+rect.height);}
   await drag(page,'tuning',touch,30);await expect.poll(async()=>(await diag(page)).targetFrequency).toBeGreaterThan(before.targetFrequency);
@@ -67,4 +75,20 @@ for(const touch of [true,false])test(`one-pixel ${touch?'touch':'Shift mouse'} d
  }else{await page.keyboard.down('Shift');await page.mouse.move(p.x,p.y);await page.mouse.down();expect((await diag(page)).targetFrequency).toBe(initial.targetFrequency);await page.mouse.move(p.x+30,p.y,{steps:30});await page.mouse.up();await page.keyboard.up('Shift');}
  await expect.poll(async()=>(await diag(page)).targetFrequency).toBeGreaterThan(initial.targetFrequency+.02);
  const after=await diag(page);expect(after.targetFrequency).toBeLessThan(initial.targetFrequency+.11);expect(after.volume).toBe(initial.volume);expect(after.drag).toBeNull();await context.close();
+});
+
+test('real multi-touch knob drag ignores a second finger and releases on owner cancel, blur and resize',async({browser})=>{
+ const context=await browser.newContext({baseURL:'http://127.0.0.1:5173',viewport:{width:390,height:844},hasTouch:true,isMobile:true});
+ const page=await context.newPage();await ready(page);const cdp=await context.newCDPSession(page),initial=await diag(page);
+ const p={...initial.controls.tuning,id:11},q={...initial.controls.volume,id:22};
+ const touch=(type,touchPoints)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints});
+ await touch('touchStart',[p]);const owner=(await diag(page)).activePointerId;expect(owner).not.toBeNull();expect((await diag(page)).targetFrequency).toBe(initial.targetFrequency);
+ await touch('touchStart',[p,q]);await touch('touchMove',[p,{...q,y:q.y-20}]);expect((await diag(page)).targetFrequency).toBe(initial.targetFrequency);expect((await diag(page)).volume).toBe(initial.volume);
+ await page.evaluate(id=>window.dispatchEvent(new PointerEvent('pointercancel',{pointerId:id+1})),owner);expect((await diag(page)).activePointerId).toBe(owner);
+ await touch('touchEnd',[q]);expect((await diag(page)).activePointerId).toBe(owner);expect((await diag(page)).drag).toBe('tuning');
+ await touch('touchMove',[{...p,x:p.x+25}]);await expect.poll(async()=>(await diag(page)).targetFrequency).toBeGreaterThan(initial.targetFrequency);
+ await touch('touchCancel',[]);expect((await diag(page)).activePointerId).toBeNull();expect((await diag(page)).drag).toBeNull();
+ await touch('touchStart',[p]);await page.evaluate(()=>window.dispatchEvent(new Event('blur')));expect((await diag(page)).drag).toBeNull();await touch('touchEnd',[]);
+ await page.locator('#btn-resume').click();await touch('touchStart',[p]);await page.setViewportSize({width:844,height:390});await expect.poll(async()=>(await diag(page)).drag).toBeNull();await touch('touchEnd',[]);
+ await page.screenshot({path:test.info().outputPath('multi-touch-radio.png')});await context.close();
 });

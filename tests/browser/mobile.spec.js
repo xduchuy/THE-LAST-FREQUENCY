@@ -109,3 +109,22 @@ test('rotation and desktop resize preserve one set of controls and saved state',
   await controlIsReachable(page,'#btn-capture',44);
   await expect(page.locator('#antenna')).toHaveValue('35');
 });
+
+test('real two-finger capture keeps its owner through unrelated up/cancel and keyboard release',async({page})=>{
+  await start(page);const diag=()=>page.evaluate(()=>window.__radioDiagnostics());
+  const box=await page.locator('#btn-capture').boundingBox(),p={id:11,x:box.x+25,y:box.y+20},q={id:22,x:box.x+box.width-25,y:box.y+20};
+  const cdp=await page.context().newCDPSession(page);
+  const touch=(type,touchPoints)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints});
+  await touch('touchStart',[p]);const owner=(await diag()).capturePointerId;expect(owner).not.toBeNull();
+  await touch('touchStart',[p,q]);expect((await diag()).capturePointerId).toBe(owner);
+  await page.evaluate(id=>window.dispatchEvent(new PointerEvent('pointercancel',{pointerId:id+1})),owner);
+  expect((await diag()).capturePointerId).toBe(owner);
+  await touch('touchEnd',[q]);expect((await diag()).holdingCapture).toBe(true);expect((await diag()).capturePointerId).toBe(owner);
+  await page.keyboard.down('Space');await page.keyboard.up('Space');expect((await diag()).holdingCapture).toBe(true);
+  await touch('touchStart',[p,q]);await touch('touchCancel',[]);expect((await diag()).holdingCapture).toBe(false);expect((await diag()).capturePointerId).toBeNull();
+  await page.locator('#btn-capture').focus();await page.keyboard.down('Space');
+  await touch('touchStart',[q]);await touch('touchEnd',[]);expect((await diag()).keyboardCaptureHeld).toBe(true);expect((await diag()).holdingCapture).toBe(true);
+  await page.keyboard.up('Space');expect((await diag()).holdingCapture).toBe(false);
+  await touch('touchStart',[p]);await page.setViewportSize({width:844,height:390});await expect.poll(async()=>(await diag()).capturePointerId).toBeNull();expect((await diag()).holdingCapture).toBe(false);
+  await touch('touchEnd',[]);await cdp.detach();
+});

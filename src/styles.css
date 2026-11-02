@@ -250,3 +250,6 @@ kbd { font-family: inherit; font-size: 8px; opacity: .7; margin-left: 5px; }
   #mobile-dock { grid-column: 2; grid-row: 2; align-self: stretch; display: flex; flex-direction: column; justify-content: center; overflow-y: auto; }
   #mobile-nav { grid-column: 2; grid-row: 3; }
 }
+
+/* Native hidden must win over the Journal's flex layout. */
+#journal-drawer[hidden] { display: none; }

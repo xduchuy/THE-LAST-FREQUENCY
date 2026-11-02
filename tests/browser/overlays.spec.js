@@ -53,3 +53,17 @@ test('freeplay resumes the existing AudioContext after victory and returning fro
  await page.locator('#btn-continue-freeplay').click();await expect.poll(async()=>(await diagnostics(page)).audioState).toBe('running');
  expect((await diagnostics(page)).missionStatus).toBe('won');await expect(page.locator('#victory-modal')).toBeHidden();
 });
+
+test('short-lived audio oscillators disconnect after repeated power interactions',async({page})=>{
+ await page.addInitScript(()=>{
+  window.__audioNodes={created:0,disconnected:0};const create=AudioContext.prototype.createOscillator;
+  AudioContext.prototype.createOscillator=function(...args){
+   const osc=create.apply(this,args),disconnect=osc.disconnect;window.__audioNodes.created++;
+   osc.disconnect=function(...args){window.__audioNodes.disconnected++;return disconnect.apply(this,args);};return osc;
+  };
+ });
+ await start(page);for(let i=0;i<4;i++)await page.locator('#btn-hud-power').click();
+ await expect.poll(()=>page.evaluate(()=>window.__audioNodes.created-window.__audioNodes.disconnected)).toBe(3); // Three persistent radio oscillators.
+ const before=await diagnostics(page);await page.locator('#btn-journal').click();await expect.poll(async()=>(await diagnostics(page)).audioGain).toBeLessThan(.002);
+ await page.keyboard.press('Escape');expect((await diagnostics(page)).audioInitialized).toBe(before.audioInitialized);
+});

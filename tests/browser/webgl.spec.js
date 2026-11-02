@@ -21,5 +21,21 @@ test('touch devices render the mobile console with the low-cost graphics default
  await expect(page.locator('#btn-quality-toggle')).toContainText('TIẾT KIỆM');
  const dimensions=await page.locator('#canvas-container canvas').evaluate(el=>({width:el.width,cssWidth:el.getBoundingClientRect().width}));
  expect(dimensions.width/dimensions.cssWidth).toBeLessThanOrEqual(1.16);
+ await page.locator('#btn-mobile-settings').tap();await page.locator('#btn-quality-toggle').tap();
+ expect((await page.evaluate(()=>window.__radioDiagnostics())).shadows).toBe(true);
+ await page.locator('#btn-quality-toggle').tap();expect((await page.evaluate(()=>window.__radioDiagnostics())).shadows).toBe(false);
+ const pixels=await page.locator('#canvas-container canvas').evaluate(el=>el.width*el.height);expect(pixels).toBeLessThanOrEqual(360000);
+ await page.locator('#btn-close-settings').tap();
  expect(errors).toEqual([]);await context.close();
+});
+
+test('WebGL context restoration preserves the existing radio and mission',async({page})=>{
+ await page.setViewportSize({width:390,height:844});await start(page);const before=await page.evaluate(()=>window.__radioDiagnostics());expect(before.webgl).toBe(true);
+ const supported=await page.locator('#canvas-container canvas').evaluate(el=>{const gl=el.getContext('webgl2')||el.getContext('webgl');window.__lose=gl?.getExtension('WEBGL_lose_context');return Boolean(window.__lose);});
+ test.skip(!supported,'Renderer does not expose WEBGL_lose_context');
+ await page.evaluate(()=>window.__lose.loseContext());await expect.poll(()=>page.evaluate(()=>window.__radioDiagnostics().webgl)).toBe(false);
+ await expect(page.locator('#radio-fallback')).toBeVisible();await page.waitForTimeout(250);await page.evaluate(()=>window.__lose.restoreContext());
+ await expect.poll(()=>page.evaluate(()=>window.__radioDiagnostics().webgl),{timeout:15000}).toBe(true);await expect(page.locator('#radio-fallback')).toBeHidden();
+ await expect(page.locator('#canvas-container canvas')).toHaveCount(1);expect((await page.evaluate(()=>window.__radioDiagnostics())).targetFrequency).toBe(before.targetFrequency);
+ await page.screenshot({path:test.info().outputPath('restored-radio.png')});
 });

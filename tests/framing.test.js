@@ -8,3 +8,11 @@ test('framing keeps all cabinet/control box corners in portrait and landscape vi
   }
  }
 });
+
+import {radioPixelRatio,LOW_PIXEL_BUDGET} from '../src/camera-framing.js';
+test('Low Quality bounds large render buffers through rotation without changing normal mobile or High Quality DPR',()=>{
+ for(const [w,h] of [[1400,900],[900,1400],[4000,2000]]){
+  const ratio=radioPixelRatio(w,h,3,false);assert.ok(w*h*ratio*ratio<=LOW_PIXEL_BUDGET+1);
+ }
+ assert.equal(radioPixelRatio(320,180,3,false),1.15);assert.equal(radioPixelRatio(1400,900,3,true),2);
+});

@@ -30,9 +30,10 @@ export function restoreMission(saved) {
   m.collected = [...new Set((Array.isArray(saved.collected) ? saved.collected.slice(0,32) : []).filter(id => CHANNELS.slice(0,5).some(c => c.id === id)))];
   for (const key of ['coolant','combo','score','overheats','interruptions','scans','mistakes']) m[key]=Math.floor(m[key]);
   m.unlocked = saved.unlocked === true && m.collected.length === 5;
-  m.status = saved.status === 'won' && m.unlocked ? 'won' : saved.status === 'lost' ? 'lost' : saved.status === 'briefing' ? 'briefing' : 'paused';
+  m.status = saved.status === 'won' && m.unlocked && m.battery>0 && m.elapsed<DIFFICULTIES[m.difficulty].duration ? 'won' : saved.status === 'lost' ? 'lost' : saved.status === 'briefing' ? 'briefing' : 'paused';
   m.reason = m.status === 'lost' ? (m.battery <= 0 ? 'battery' : 'timeout') : '';
   m.lastCaptureAt = Number.isFinite(saved.lastCaptureAt) ? clamp(saved.lastCaptureAt,0,m.elapsed) : null;
+  if(m.status!=='won' && terminalReason(m)) endMission(m);
   return m;
 }
 export function stormAt(m) {
@@ -49,14 +50,38 @@ export function antennaGain(m, channel) {
 export function captureDuration(m, id) {
   return id === 'chronos_final' ? 8 : DIFFICULTIES[m.difficulty].capture;
 }
+export const SIMULATION_STEP = .05;
+export const MAX_CAPTURE_GAP = 2; // Longer gaps have no continuous reception evidence.
+export function terminalReason(m) {
+  if(m.battery<=0) return 'battery';
+  if(m.elapsed>=DIFFICULTIES[m.difficulty].duration-1e-9) return 'timeout';
+  return null;
+}
+export function endMission(m) {
+  const reason=terminalReason(m);
+  if(!reason || m.status==='won' || m.status==='lost') return false;
+  m.status='lost';m.reason=reason;m.progress=0;m.captureId=null;return true;
+}
 export function tickMission(m, dt, input = {}) {
-  if (m.status !== 'playing' || !Number.isFinite(dt) || dt <= 0) return [];
-  dt = Math.min(dt, 0.25);
+  if(m.status!=='playing' || !Number.isFinite(dt) || dt<=0) return [];
+  if(endMission(m)) return [{type:'lost',reason:m.reason}];
+  const events=[];
+  // At most one mission duration, with a finite upper bound (21,601 steps).
+  let remaining=Math.min(dt,DIFFICULTIES[m.difficulty].duration-m.elapsed+SIMULATION_STEP);
+  if(!input || typeof input!=='object')input={};
+  const safeInput=dt>MAX_CAPTURE_GAP?{...input,holding:false,captureAllowed:false}:input;
+  while(remaining>1e-9 && m.status==='playing'){
+    const step=Math.min(SIMULATION_STEP,remaining);
+    events.push(...stepMission(m,step,safeInput));remaining-=step;
+  }
+  return events;
+}
+function stepMission(m,dt,input) {
   const events = [];
   m.elapsed += dt;
   m.scanCooldown = Math.max(0,m.scanCooldown-dt);
   m.trip = Math.max(0,m.trip-dt);
-  const powered = input.powerOn && m.trip <= 0;
+  const powered = input.powerOn===true && m.trip <= 0;
   const storm = stormAt(m).active;
   m.battery = clamp(m.battery + dt * (powered ? -(DIFFICULTIES[m.difficulty].drain + (input.holding ? 0.35 : 0) + (storm ? 0.05 : 0)) : 0.16),0,100);
   m.heat = clamp(m.heat + dt * (powered && input.holding ? (storm ? 8 : 6) : powered ? -0.65 : -3.5),0,100);
@@ -64,17 +89,14 @@ export function tickMission(m, dt, input = {}) {
     m.trip = 8; m.heat = 72; m.battery = Math.max(0,m.battery-8); m.overheats++;
     m.combo = 0; events.push({type:'overheat'});
   }
-  if (m.battery <= 0 || m.elapsed >= DIFFICULTIES[m.difficulty].duration) {
-    m.status = 'lost'; m.reason = m.battery <= 0 ? 'battery' : 'timeout'; m.progress = 0;
-    return [...events,{type:'lost',reason:m.reason}];
-  }
-  const ch = CHANNELS.find(c => c.id === input.stationId);
-  const eligible = ch && (ch.id !== 'chronos_final' || m.unlocked) && !m.collected.includes(ch.id);
-  const receiving = powered && m.trip <= 0 && input.holding && eligible && input.stable && input.signal >= DIFFICULTIES[m.difficulty].threshold;
+  if (endMission(m)) return [...events,{type:'lost',reason:m.reason}];
+  const reception=evaluateReception(m,input);
+  const ch=reception.targetStation;
+  const receiving=input.holding===true && input.captureAllowed!==false && reception.canCapture;
   if (receiving) {
     if (m.captureId !== ch.id) { m.captureId = ch.id; m.progress = 0; }
     m.progress += dt;
-    if (m.progress >= captureDuration(m,ch.id)) {
+    if (m.progress >= captureDuration(m,ch.id)-1e-9) {
       m.progress = 0;
       m.combo = m.lastCaptureAt !== null && m.elapsed-m.lastCaptureAt < 90 ? m.combo+1 : 1;
       m.lastCaptureAt = m.elapsed;
@@ -95,20 +117,42 @@ export function tickMission(m, dt, input = {}) {
   return events;
 }
 export function useCoolant(m) {
-  if (m.status !== 'playing' || m.coolant <= 0) return false;
+  if (m.status !== 'playing' || endMission(m) || m.coolant <= 0) return false;
   m.coolant--; m.heat=Math.max(0,m.heat-45); return true;
 }
 export function scan(m) {
-  if (m.status !== 'playing' || m.scanCooldown > 0 || m.battery <= 3 || m.trip > 0) return null;
+  if (m.status !== 'playing' || endMission(m) || m.scanCooldown > 0 || m.battery <= 3 || m.trip > 0) return null;
   const target = CHANNELS.find(c => !m.collected.includes(c.id) && (c.id !== 'chronos_final' || m.unlocked));
   if (!target) return null;
   m.battery-=3; m.scanCooldown=18; m.scans++;
   return target;
 }
 export function submitCode(m, code) {
-  if (m.status !== 'playing' || m.collected.length < 5) return 'locked';
+  if (m.status !== 'playing') return 'locked';
+  if (endMission(m)) return 'lost';
+  if (m.collected.length < 5) return 'locked';
   if (m.unlocked) return 'unlocked';
+  if(typeof code!=='string' || !/^\d{4}$/.test(code)) return 'invalid';
   if (code === '7429') { m.unlocked = true; m.score+=1500; return 'correct'; }
-  m.battery = Math.max(0,m.battery-5); m.elapsed+=15; m.combo=0; m.mistakes++;
-  return 'wrong';
+  m.battery = Math.max(0,m.battery-5); m.elapsed=Math.min(DIFFICULTIES[m.difficulty].duration,m.elapsed+15); m.combo=0; m.mistakes++;
+  return endMission(m)?'lost':'wrong';
+}
+
+export function evaluateReception(m, radio = {}) {
+  if(!radio || typeof radio!=='object')radio={};
+  const targetStation = CHANNELS.find(c=>c.id===radio.stationId) || null;
+  const result = reason => ({canCapture:reason==='ready', status:reason==='ready'?'ready':'blocked', reason,
+    targetStation, captureDuration:targetStation?captureDuration(m,targetStation.id):0});
+  if (m.status!=='playing') return result(m.status==='won'||m.status==='lost'?'terminal':'inactive');
+  if (m.trip>0) return result('trip');
+  if (radio.powerOn!==true) return result('off');
+  if (!targetStation) return result('search');
+  if (targetStation.id==='chronos_final' && !m.unlocked) return result('locked');
+  if (m.collected.includes(targetStation.id)) return result('collected');
+  if (![radio.frequency,radio.targetFrequency,radio.distance,radio.signal,radio.warmUpLevel].every(Number.isFinite) || radio.distance<0 || radio.signal<0 || radio.signal>1 || radio.warmUpLevel<0 || radio.warmUpLevel>1) return result('invalid');
+  if (radio.warmUpLevel<=.85) return result('warming');
+  if (radio.stable===false || Math.abs(radio.targetFrequency-radio.frequency)>=.005) return result('tuning');
+  if (radio.distance>.032) return result('search');
+  if (radio.signal<DIFFICULTIES[m.difficulty].threshold) return result('antenna');
+  return result('ready');
 }

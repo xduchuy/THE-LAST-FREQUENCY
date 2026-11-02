@@ -1,4 +1,10 @@
 import * as THREE from 'three';
+export const LOW_PIXEL_BUDGET = 360_000;
+// Keep CSS framing/hit coordinates intact while bounding Low Quality fill cost.
+export function radioPixelRatio(width, height, deviceRatio, highQuality) {
+  const ratio = Number.isFinite(deviceRatio) && deviceRatio > 0 ? deviceRatio : 1;
+  return highQuality ? Math.min(ratio, 2) : Math.min(ratio, 1.15, Math.sqrt(LOW_PIXEL_BUDGET / Math.max(1, width * height)));
+}
 // Fit the cabinet and every control, rather than the decorative telescoping aerial.
 export function frameRadio(box, aspect) {
   const fov = THREE.MathUtils.clamp(38 + (1-aspect)*6, 32, 48);

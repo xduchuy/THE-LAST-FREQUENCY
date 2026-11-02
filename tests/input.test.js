@@ -15,6 +15,7 @@ test('keyboard ignores composing, modifiers, text fields, native buttons and all
  assert.equal(keyboardAction(event(' ',{target:{closest:()=>({id:'btn-capture'})}})),'capture');assert.equal(keyboardAction(event('p',{repeat:true})),null);
  assert.equal(keyboardAction(event('Escape',{repeat:true})),null);assert.equal(keyboardAction(event('Escape'),true),'escape');
  assert.equal(keyboardAction(event(' ',{isComposing:true})),null);assert.equal(keyboardAction(event('p')),'power');
+ assert.equal(keyboardAction(event(' ',{repeat:true})),null);
 });
 test('canvas-relative coordinates and incremental bounded dragging keep controls independent',()=>{
  assert.deepEqual(pointerCoordinates(250,200,{left:100,top:100,width:300,height:200}),{x:0,y:0});
@@ -38,4 +39,12 @@ test('slow one-pixel drags accumulate fractional movement instead of losing fine
  assert.ok(Math.abs(touch-3.09)<1e-9);assert.ok(Math.abs(fine-3.045)<1e-9);
  assert.equal(accumulateDrag(12,'tuning',20,0),12);assert.ok(accumulateDrag(12,'tuning',-1,0)<12);
  assert.equal(accumulateDrag(0,'volume',-20,0),0);
+});
+
+import { ownsPointer, smoothApproach } from '../src/input-manager.js';
+test('only the owner can release or cancel a pointer; keyboard has no pointer owner',()=>{
+ for(const type of ['pointerup','pointercancel','lostpointercapture']){assert.equal(ownsPointer(7,{pointerId:8,type}),false);assert.equal(ownsPointer(7,{pointerId:7,type}),true);assert.equal(ownsPointer(null,{pointerId:7,type}),false);}
+});
+test('warmup/flywheel smoothing consumes real time equally at 60 and 2 FPS',()=>{
+ for(const fps of [60,30,10,5,2]){let value=0;for(let i=0;i<fps;i++)value=smoothApproach(value,1,3.2,1/fps);assert.ok(Math.abs(value-(1-Math.exp(-3.2)))<1e-9);}
 });

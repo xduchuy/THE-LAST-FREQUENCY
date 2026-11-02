@@ -1,4 +1,4 @@
-# THE LAST FREQUENCY V3.1 — Immersive Radio Console
+# THE LAST FREQUENCY V3.2 — Stability & Fair Play
 
 Game giải đố / sinh tồn vô tuyến, tiếng Việt. Năm 1974, một điện báo viên phải khôi phục mạng CHRONOS trước khi cửa sổ liên lạc đóng lại.
 
@@ -27,9 +27,11 @@ Mở địa chỉ do Vite hiển thị. `npm run build` tạo bản tĩnh trong 
 
 Trên điện thoại, radio 3D nằm trong vùng tương tác riêng. Chạm POWER, kéo núm TUNING theo chiều ngang/dọc để dò, kéo VOLUME để chỉnh âm lượng. Các núm, đèn và thanh HTML dùng cùng state. Bảng lệnh ca trực dưới radio mở vùng sóng mục tiêu, scanner, làm mát và nhật ký; bấm MÁY THU để gấp lại. Anten, dò tinh và nút thu luôn ở thanh kim loại phía dưới. Xoay ngang đưa radio sang trái, telemetry và controls sang phải; bố cục chừa tai thỏ/thanh Home.
 
-Thiết bị cảm ứng mặc định dùng chất lượng tiết kiệm, DPR giới hạn, ít mưa/bụi và không có bóng động. Người chơi có thể chọn chất lượng cao trong Cài đặt. Nếu WebGL không khả dụng, thông báo HUD xuất hiện trong vùng radio và toàn bộ trò chơi vẫn điều khiển được bằng HTML.
+Thiết bị cảm ứng mặc định dùng chất lượng tiết kiệm, DPR giới hạn, ít mưa/bụi và không có bóng động. Chế độ Low giới hạn buffer radio ở 360.000 pixel trên canvas lớn; CSS, camera và tọa độ chạm giữ nguyên. Chuyển chất lượng cũng cập nhật bóng động đúng chế độ. Người chơi có thể chọn chất lượng cao trong Cài đặt. Nếu WebGL không khả dụng, thông báo HUD xuất hiện trong vùng radio và toàn bộ trò chơi vẫn điều khiển được bằng HTML.
 
 Escape đóng Journal/Settings/Help trước, không mở Pause khi đóng tài liệu. Không có overlay: Escape tạm dừng/tiếp tục; thắng/thua giữ nguyên trạng thái terminal. Modal giữ focus, chặn thao tác phía sau và trả focus về nút mở khi đóng. Space không kích hoạt thu khi gõ ghi chú hoặc mở modal; nút Thu nhận Space khi được focus. Ctrl/Cmd/Alt và IME không bị hotkey game chiếm.
+
+Đồng hồ ca trực dùng `performance.now()`, độc lập với animation; tài nguyên chạy bước cố định 50 ms. 18/12/9 phút được giữ nguyên cả khi FPS thấp. Chỉ ghi nhận thu liên tục khi cả hai mẫu đầu/cuối đều hợp lệ và vẫn giữ đúng trạm. Khoảng treo trên 2 giây tính đủ thời gian, pin chờ, hạ nhiệt, bão và cooldown đến hết ca; không cấp tiến độ thu hoặc tính giữ nút trong khoảng không quan sát được, báo trên HUD. Nếu vẫn giữ đúng pointer/phím, chỉ những mẫu hợp lệ mới sau khi hết treo mới tiếp tục thu. Tab đang hiển thị tiếp tục tính giờ; stall không tự mở menu Pause. Catch-up có giới hạn theo thời lượng ca, không chạy vô hạn.
 
 Đọc hồ sơ hoặc mở menu tự dừng đồng hồ và tài nguyên. Rời tab sẽ tạm dừng và suspend AudioContext. Game gộp các yêu cầu lưu liên tiếp, định kỳ tối đa một lần/giây và flush khi rời trang; bản tin thu dở phải thu lại khi tải lại. Bản lưu phụ thuộc quyền localStorage của trình duyệt; lỗi lưu được báo rõ mà không chặn game.
 
@@ -52,14 +54,18 @@ Playwright ưu tiên `CHROMIUM_PATH` nếu được cấu hình, tiếp đến C
 
 Bộ HUD/fallback chạy với WebGL bị tắt có chủ đích. Bộ `radio-3d.spec.js` và `webgl.spec.js` bật WebGL thật qua SwiftShader và kiểm tra mesh bằng pointer/touch thật; không coi fallback là chứng minh render 3D. Ma trận mobile gồm 320×568, 360×640, 390×844, 414×896, 667×375, 844×390, 768×1024; desktop 1440×900 và 1920×1080. Screenshot, trace và báo cáo nằm trong `test-results/`, `playwright-report/` (không commit).
 
-`.github/workflows/ci.yml` chạy trên push/PR vào main hoặc manual: hai job Node 22 cho unit/build và E2E, cài Chromium cùng OS dependencies, quyền read-only, timeout, concurrency cancellation và artifact khi lỗi. Workflow không deploy. Có workflow trong repo không có nghĩa đã xác minh CI xanh trên GitHub.
+`stability.spec.js` kiểm tra thời gian thực khi trì hoãn RAF (60/10/5/2), pause/hidden/reload, main-thread stall thật, HUD và mã sai dẫn đến thua ngay. Unit test mô phỏng cả 30 FPS và pause 30 giây. Multi-touch dùng Chromium CDP phát touch thật, không gán state. WebGL restoration dùng `WEBGL_lose_context` khi renderer hỗ trợ.
 
-Báo cáo baseline, bằng chứng kiểm thử và giới hạn: [docs/V3.1-report.md](docs/V3.1-report.md). Thay đổi phiên bản: [CHANGELOG.md](CHANGELOG.md).
+`.github/workflows/ci.yml` chạy trên push/PR vào main hoặc manual: hai job độc lập Node 22 cho unit/build và E2E; riêng E2E pin `ubuntu-24.04` tương thích Playwright 1.56.1, cài Chromium cùng OS dependencies, quyền read-only, timeout, concurrency cancellation và artifact khi lỗi. Workflow không deploy. Có workflow trong repo không có nghĩa đã xác minh CI xanh trên GitHub.
+
+Báo cáo baseline, bằng chứng kiểm thử và giới hạn: [docs/V3.2-report.md](docs/V3.2-report.md) (bản trước: [V3.1](docs/V3.1-report.md)). Thay đổi phiên bản: [CHANGELOG.md](CHANGELOG.md).
 
 
 ## Mã nguồn
 
 - `src/mission.js`: tài nguyên, thời gian, bão, thu tín hiệu, tính điểm, thắng/thua, kiểm tra bản lưu.
+- `src/mission-clock.js`: đồng hồ monotonic, accumulator, pause/resume và chính sách stall.
+- `src/reception.js`: thông báo HUD cho kết quả đánh giá thu dùng chung từ mission.
 - `src/main.js`: kế thừa cảnh 3D, âm thanh tổng hợp và hồ sơ của bản V2.2; bổ sung điều khiển nhiệm vụ.
 - `src/overlay-manager.js`: overlay stack, Escape policy, inert và focus.
 - `src/input-manager.js`: một keyboard pipeline, input guard và toán drag/pointer.

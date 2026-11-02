@@ -25,7 +25,7 @@ Mở địa chỉ do Vite hiển thị. `npm run build` tạo bản tĩnh trong 
 
 **P** bật/tắt nguồn · **← / →** dò sóng · **Shift + ← / →** bước 0.01 MHz · **J** hồ sơ · **K** bản đồ sóng · **M** tắt tiếng · **Esc** tạm dừng / tiếp tục.
 
-Các nút và thanh trượt hỗ trợ cảm ứng. Space không dùng khi đang gõ ghi chú. Đọc hồ sơ hoặc mở menu sẽ tự dừng tài nguyên và đồng hồ; đổi tab sẽ tạm dừng. Game tự lưu trên trình duyệt mỗi giây; bản ghi đang thu dở phải thu lại sau khi tải lại. Lưu dữ liệu phụ thuộc quyền localStorage của trình duyệt. Xóa băng chỉ xóa ca hiện tại, giữ kỷ lục theo độ khó.
+Trên điện thoại, bảng trạng thái cuộn riêng; anten, dò tần và nút thu luôn nằm trong thanh điều khiển cố định. Thanh chức năng dưới cùng mở Hồ sơ, Bản đồ và Cài đặt; nút ? mở hướng dẫn, II tạm dừng. Bố cục tự đổi thành hai cột khi xoay ngang, chừa vùng tai thỏ / thanh Home. Các nút có vùng chạm tối thiểu 44 px. Thiết bị cảm ứng mặc định dùng chất lượng đồ họa tiết kiệm; có thể đổi trong Cài đặt. Các nút và thanh trượt hỗ trợ cảm ứng. Space không dùng khi đang gõ ghi chú. Đọc hồ sơ hoặc mở menu sẽ tự dừng tài nguyên và đồng hồ; đổi tab sẽ tạm dừng. Game tự lưu trên trình duyệt mỗi giây; bản ghi đang thu dở phải thu lại sau khi tải lại. Lưu dữ liệu phụ thuộc quyền localStorage của trình duyệt. Xóa băng chỉ xóa ca hiện tại, giữ kỷ lục theo độ khó.
 
 ## Kiểm tra
 

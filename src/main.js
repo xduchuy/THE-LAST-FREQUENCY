@@ -1,3 +1,4 @@
+import { setupMobileLayout } from './mobile-layout.js';
 import { CHANNELS, DIFFICULTIES, createMission, restoreMission, stormAt, carrierFrequency, antennaGain, captureDuration, tickMission, scan, useCoolant, submitCode } from './mission.js';
 let mission = createMission();
 let holdingCapture = false;
@@ -163,7 +164,7 @@ import './styles.css';
       assistMode: false,
       scopeMode: 'wave', // 'wave' | 'spectrum'
       reducedMotion: false,
-      highQuality: true,
+      highQuality: !window.matchMedia('(pointer: coarse)').matches,
       dawnProgress: 0.0, // 0.0 (stormy night) -> 1.0 (dawn epilogue)
       lastTuneTimestamp: 0
     };
@@ -2265,6 +2266,7 @@ import './styles.css';
     let hudNeedlePos = 2;
 
     function updateHUD(nearestInfo) {
+      btnHudPower.setAttribute('aria-pressed', String(state.powerOn));
       hudFreqEl.textContent = state.frequency.toFixed(2);
       const sigPct = Math.round(state.signalStrength * 100);
       hudSigPctEl.textContent = `${sigPct}%`;
@@ -3035,6 +3037,7 @@ function renderMissionPanel() {
   const remaining = Math.max(0,Math.ceil(d.duration-mission.elapsed));
   document.getElementById('mission-time').textContent = `${String(Math.floor(remaining/60)).padStart(2,'0')}:${String(remaining%60).padStart(2,'0')}`;
   document.getElementById('mission-score').textContent = String(mission.score).padStart(5,'0');
+  document.getElementById('mobile-log-count').textContent = `${mission.collected.length}/5`;
   document.getElementById('mission-combo').textContent = mission.combo > 1 ? `CHUỖI ${mission.combo} · +${Math.min(5,mission.combo-1)*200}` : `${mission.collected.length}/5 BẢN TIN`;
   document.getElementById('battery-value').textContent = `${Math.ceil(mission.battery)}%`;
   document.getElementById('battery-meter').value = mission.battery;
@@ -3073,9 +3076,12 @@ function renderMissionPanel() {
   const btn = document.getElementById('btn-capture');
   btn.disabled = mission.status !== 'playing' || !state.powerOn || mission.trip>0 || (got && nearest.distance<0.05);
   btn.classList.toggle('receiving',holdingCapture);
-  btn.innerHTML = channel.id === 'chronos_final' ? '◉ GIỮ ĐỂ PHÁT SOS <kbd>SPACE</kbd>' : '● GIỮ ĐỂ THU BẢN TIN <kbd>SPACE</kbd>';
+  const captureLabel = channel.id === 'chronos_final' ? '◉ GIỮ ĐỂ PHÁT SOS <kbd>SPACE</kbd>' : '● GIỮ ĐỂ THU BẢN TIN <kbd>SPACE</kbd>';
+  if (btn.innerHTML !== captureLabel) btn.innerHTML = captureLabel;
   document.getElementById('btn-scan').disabled = mission.status !== 'playing' || mission.scanCooldown>0 || mission.battery<=3 || mission.trip>0;
-  document.getElementById('btn-scan').innerHTML = `QUÉT SÓNG <kbd>R</kbd><small>${mission.scanCooldown>0 ? `NẠP LẠI ${Math.ceil(mission.scanCooldown)}S` : '−3% PIN'}</small>`;
+  const scanButton = document.getElementById('btn-scan');
+  const scanLabel = `QUÉT SÓNG <kbd>R</kbd><small>${mission.scanCooldown>0 ? `NẠP LẠI ${Math.ceil(mission.scanCooldown)}S` : '−3% PIN'}</small>`;
+  if (scanButton.innerHTML !== scanLabel) scanButton.innerHTML = scanLabel;
   document.getElementById('btn-coolant').disabled = mission.status !== 'playing' || mission.coolant<=0;
 }
 function missionSummary() {
@@ -3126,6 +3132,7 @@ captureButton.addEventListener('pointerdown',e=>{
   e.preventDefault(); captureButton.setPointerCapture(e.pointerId); holdingCapture=true; audio.init();
 });
 function releaseCapture() { holdingCapture=false; }
+captureButton.addEventListener('lostpointercapture', releaseCapture);
 window.addEventListener('pointerup',releaseCapture);
 window.addEventListener('pointercancel',releaseCapture);
 window.addEventListener('keyup',e=>{ if(e.code==='Space') releaseCapture(); });
@@ -3146,3 +3153,11 @@ document.getElementById('btn-resume').addEventListener('click',resumeMission);
 document.getElementById('btn-new-shift').addEventListener('click',resetAllProgress);
 document.getElementById('antenna').addEventListener('input',e=>{ mission.antenna=Number(e.target.value); });
 document.getElementById('antenna').addEventListener('change',saveProgress);
+
+setupMobileLayout({
+  releaseCapture,
+  pause: pauseMission,
+  openJournal: openJournalDrawer,
+  openSettings: () => document.getElementById('btn-sound').click(),
+  openHelp: () => document.getElementById('btn-help').click()
+});

@@ -14,20 +14,21 @@ export const CHANNELS = [
 ];
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 export function createMission(difficulty = 'operator') {
-  if (!DIFFICULTIES[difficulty]) difficulty = 'operator';
+  if (!Object.hasOwn(DIFFICULTIES,difficulty)) difficulty = 'operator';
   return { version: 3, difficulty, status: 'briefing', elapsed: 0, battery: 100, heat: 12,
     antenna: 90, coolant: 3, score: 0, combo: 0, collected: [], unlocked: false,
     progress: 0, captureId: null, scanCooldown: 0, trip: 0, overheats: 0,
     interruptions: 0, reason: '', lastCaptureAt: null, scans: 0, mistakes: 0 };
 }
 export function restoreMission(saved) {
-  if (!saved || saved.version !== 3 || !DIFFICULTIES[saved.difficulty]) return createMission();
+  if (!saved || saved.version !== 3 || !Object.hasOwn(DIFFICULTIES,saved.difficulty)) return createMission();
   const m = createMission(saved.difficulty);
   const limits = { elapsed: [0, DIFFICULTIES[m.difficulty].duration], battery: [0,100], heat: [0,100], antenna: [0,180], coolant: [0,3], score: [0,100000], combo: [0,6], scanCooldown: [0,18], trip: [0,8], overheats: [0,1000], interruptions: [0,10000], scans: [0,10000], mistakes: [0,10000] };
   for (const [key,[lo,hi]] of Object.entries(limits)) {
     if (Number.isFinite(saved[key])) m[key] = clamp(saved[key],lo,hi);
   }
-  m.collected = [...new Set((Array.isArray(saved.collected) ? saved.collected : []).filter(id => CHANNELS.slice(0,5).some(c => c.id === id)))];
+  m.collected = [...new Set((Array.isArray(saved.collected) ? saved.collected.slice(0,32) : []).filter(id => CHANNELS.slice(0,5).some(c => c.id === id)))];
+  for (const key of ['coolant','combo','score','overheats','interruptions','scans','mistakes']) m[key]=Math.floor(m[key]);
   m.unlocked = saved.unlocked === true && m.collected.length === 5;
   m.status = saved.status === 'won' && m.unlocked ? 'won' : saved.status === 'lost' ? 'lost' : saved.status === 'briefing' ? 'briefing' : 'paused';
   m.reason = m.status === 'lost' ? (m.battery <= 0 ? 'battery' : 'timeout') : '';

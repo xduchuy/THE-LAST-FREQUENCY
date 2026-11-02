@@ -63,6 +63,6 @@ test('mobile console has usable capture and tuning controls',async({page})=>{
  await expect(page.locator('#equipment-header')).toBeHidden();
  await tune(page,3.2,35); await hold(page,5.3);
  await expect(page.locator('#progress-counter')).toHaveText('1/5 TÍN HIỆU');
- await page.screenshot({path:'/tmp/frequency-mobile.png',fullPage:true});
+ await page.screenshot({path:test.info().outputPath('mobile.png'),fullPage:true});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

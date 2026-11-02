@@ -1,3 +1,14 @@
+import { createOverlayManager, escapeAction } from './overlay-manager.js';
+import { setupInputManager, accumulateDrag, pointerCoordinates } from './input-manager.js';
+import { STORAGE_KEY, readGameSave, writeGameSave, importLegacySave } from './storage.js';
+import { frameRadio } from './camera-framing.js';
+let overlays;
+let storageSession;
+let archive = null;
+let legacyDecision = null;
+let pendingSaveTimer = null;
+let lastStorageWrite = -Infinity;
+let capturePointerId = null;
 import { setupMobileLayout } from './mobile-layout.js';
 import { CHANNELS, DIFFICULTIES, createMission, restoreMission, stormAt, carrierFrequency, antennaGain, captureDuration, tickMission, scan, useCoolant, submitCode } from './mission.js';
 let mission = createMission();
@@ -10,7 +21,7 @@ import './styles.css';
     /*************************************************************************
      * 1. STATION DATA & DISCOVERY-FIRST MYSTERY PUZZLE CONFIGURATION
      *************************************************************************/
-    const STORAGE_KEY = 'the_last_frequency_save_v3';
+
 
     const STATIONS = [
       {
@@ -169,86 +180,42 @@ import './styles.css';
       lastTuneTimestamp: 0
     };
 
-    function loadProgress() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
-        const saved = JSON.parse(raw);
-        mission = restoreMission(saved.mission);
-        if (Array.isArray(saved.discoveredIds)) {
-          const validIds = new Set(STATIONS.map(s => s.id));
-          state.discoveredIds = [...new Set(saved.discoveredIds.filter(id => validIds.has(id)))];
-        }
-        if (Array.isArray(saved.sensedIds)) {
-          const validIds = new Set(STATIONS.map(s => s.id));
-          state.sensedIds = [...new Set(saved.sensedIds.filter(id => validIds.has(id)))];
-        }
-        if (typeof saved.operatorNote === 'string') state.operatorNote = saved.operatorNote.slice(0, 1600);
-        if (Array.isArray(saved.operatorEvents)) {
-          state.operatorEvents = saved.operatorEvents.filter(row => typeof row === 'string').slice(-28);
-        }
-        if (Array.isArray(saved.bandMemory)) {
-          // Sparse pairs reduce save size and preserve untouched dark regions.
-          for (const pair of saved.bandMemory) {
-            if (!Array.isArray(pair) || pair.length !== 2) continue;
-            const i = Number(pair[0]), val = Number(pair[1]);
-            if (Number.isInteger(i) && i >= 0 && i < 451 && Number.isFinite(val)) {
-              state.bandMemory[i] = THREE.MathUtils.clamp(Math.round(val), 0, 100);
-            }
-          }
-        }
-        if (Array.isArray(saved.codeDigits) && saved.codeDigits.length === 4) {
-          state.codeDigits = saved.codeDigits.map(n => THREE.MathUtils.clamp(Number(n) || 0, 0, 9));
-        }
-        // Ensure v1 save compatibility while enforcing the 5-station rule for v2 if not all stations found
-        if (typeof saved.codeUnlocked === 'boolean') {
-          state.codeUnlocked = saved.codeUnlocked && state.discoveredIds.length >= 5;
-        }
-        if (typeof saved.gameCompleted === 'boolean') {
-          state.gameCompleted = saved.gameCompleted && state.codeUnlocked;
-          if (state.gameCompleted) state.dawnProgress = 1.0;
-        }
-        if (typeof saved.assistMode === 'boolean') state.assistMode = saved.assistMode;
-        if (typeof saved.volume === 'number') state.volume = THREE.MathUtils.clamp(saved.volume, 0, 1);
-        if (typeof saved.muted === 'boolean') state.muted = saved.muted;
-        if (typeof saved.reducedMotion === 'boolean') state.reducedMotion = saved.reducedMotion;
-        if (typeof saved.highQuality === 'boolean') state.highQuality = saved.highQuality;
-        if (typeof saved.frequency === 'number') {
-          state.frequency = THREE.MathUtils.clamp(saved.frequency, 3.0, 12.0);
-          state.targetFrequency = state.frequency;
-        }
-        state.discoveredIds = [...mission.collected];
-        state.codeUnlocked = mission.unlocked;
-        state.gameCompleted = mission.status === 'won';
-      } catch (err) {
-        console.warn('Không thể đọc dữ liệu lưu LocalStorage:', err);
+    function storageAccess() { try { return window.localStorage; } catch { return null; } }
+    function applySave(saved) {
+      mission = restoreMission(saved.mission);
+      archive = saved.archive || null; legacyDecision = saved.legacyDecision || null;
+      for (const key of ['operatorNote','operatorEvents','sensedIds','codeDigits','assistMode','volume','muted','reducedMotion','highQuality']) {
+        if (saved[key] !== undefined) state[key] = saved[key];
       }
+      state.bandMemory = Array(451).fill(-1);
+      for (const [i,v] of saved.bandMemory) state.bandMemory[i] = v;
+      state.frequency = saved.frequency; state.targetFrequency = saved.frequency;
+      state.discoveredIds = [...mission.collected]; state.codeUnlocked = mission.unlocked;
+      state.gameCompleted = mission.status === 'won'; state.dawnProgress = state.gameCompleted ? 1 : 0;
     }
-
-    function saveProgress() {
-      try {
-        const payload = {
-          mission,
-          discoveredIds: state.discoveredIds,
-          sensedIds: state.sensedIds,
-          operatorNote: state.operatorNote,
-          operatorEvents: state.operatorEvents,
-          bandMemory: state.bandMemory.flatMap((v, i) => v < 0 ? [] : [[i, v]]),
-          codeDigits: state.codeDigits,
-          codeUnlocked: state.codeUnlocked,
-          gameCompleted: state.gameCompleted,
-          assistMode: state.assistMode,
-          volume: state.volume,
-          muted: state.muted,
-          reducedMotion: state.reducedMotion,
-          highQuality: state.highQuality,
-          frequency: Number(state.frequency.toFixed(2))
-        };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-      } catch (err) {
-        document.getElementById('save-status').textContent = 'KHÔNG THỂ LƯU';
-        console.warn('Không thể ghi dữ liệu lưu LocalStorage:', err);
+    function loadProgress() {
+      storageSession = readGameSave(storageAccess());
+      if (storageSession.save) applySave(storageSession.save);
+      document.getElementById('legacy-recovery').hidden = !storageSession.legacy;
+      if (storageSession.error) document.getElementById('storage-notice').textContent = storageSession.error;
+      if (!storageSession.writable) document.getElementById('save-status').textContent='BẢN LƯU ĐƯỢC BẢO VỆ';
+    }
+    function saveProgress(force = false) {
+      if (!storageSession?.writable || storageSession.legacy) return;
+      const now = performance.now();
+      if (force !== true && now-lastStorageWrite < 1000) {
+        if (!pendingSaveTimer) pendingSaveTimer = setTimeout(() => saveProgress(true), 1000-(now-lastStorageWrite));
+        return;
       }
+      clearTimeout(pendingSaveTimer); pendingSaveTimer=null; lastStorageWrite=now;
+      const payload = { mission, archive, legacyDecision,
+        operatorNote:state.operatorNote, operatorEvents:state.operatorEvents, sensedIds:state.sensedIds,
+        bandMemory:state.bandMemory.flatMap((v,i)=>v<0?[]:[[i,v]]), codeDigits:state.codeDigits,
+        assistMode:state.assistMode, volume:state.volume, muted:state.muted, reducedMotion:state.reducedMotion,
+        highQuality:state.highQuality, frequency:Number(state.frequency.toFixed(2)) };
+      const result = writeGameSave(storageAccess(),payload);
+      document.getElementById('save-status').textContent = result.ok ? 'TỰ ĐỘNG LƯU' : 'KHÔNG THỂ LƯU';
+      if (!result.ok) document.getElementById('storage-notice').textContent = result.error;
     }
 
     /*************************************************************************
@@ -401,6 +368,7 @@ import './styles.css';
           this.startLookaheadScheduler();
           this.updateAudioState();
         } catch (e) {
+          this.ctx?.close().catch(() => {}); this.ctx=null;
           console.warn('Web Audio API khởi tạo thất bại:', e);
         }
       }
@@ -430,7 +398,7 @@ import './styles.css';
         if (this.schedulerTimer) clearInterval(this.schedulerTimer);
         this.schedulerTimer = setInterval(() => {
           if (!this.initialized || !this.ctx || document.hidden) return;
-          if (!state.powerOn || state.muted || state.signalStrength < 0.22) {
+          if (!state.powerOn || state.muted || isAnyOverlayOpen() || state.signalStrength < 0.22) {
             this.nextEventTime = this.ctx.currentTime + 0.05;
             return;
           }
@@ -573,10 +541,10 @@ import './styles.css';
         if (!this.initialized || !this.ctx) return;
         const now = this.ctx.currentTime;
 
-        const targetRain = (state.muted || mission.status === 'paused' || mission.status === 'lost') ? 0.0001 : Math.max(0.0001, state.volume * 0.045);
+        const targetRain = (state.muted || isAnyOverlayOpen() || mission.status === 'paused' || mission.status === 'lost') ? 0.0001 : Math.max(0.0001, state.volume * 0.045);
         this.rainGain.gain.setTargetAtTime(targetRain, now, 0.1);
 
-        const targetMaster = (state.powerOn && !state.muted && mission.status !== 'paused' && mission.status !== 'lost')
+        const targetMaster = (state.powerOn && !state.muted && !isAnyOverlayOpen() && mission.status !== 'paused' && mission.status !== 'lost')
           ? Math.max(0.0001, state.volume * Math.max(0.05, state.warmUpLevel))
           : 0.0001;
         this.masterGain.gain.setTargetAtTime(targetMaster, now, state.powerOn ? 0.08 : 0.16);
@@ -706,17 +674,6 @@ import './styles.css';
 
     const audio = new RadioAudioEngine();
 
-    // Pause/resume AudioContext cleanly when browser tab visibility changes
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) saveProgress();
-      if (!audio.initialized || !audio.ctx) return;
-      if (document.hidden) {
-        audio.ctx.suspend().catch(() => {});
-      } else if (state.powerOn) {
-        audio.ctx.resume().catch(() => {});
-      }
-    });
-
     /*************************************************************************
      * 4. HELPER: STATION DISTANCE & SIGNAL STRENGTH CALCULATION
      *************************************************************************/
@@ -745,6 +702,9 @@ import './styles.css';
     const container = document.getElementById('canvas-container');
     let renderer = null, scene = null, camera = null;
     let webglAvailable = false;
+    let radioBounds = null, frameTarget = null;
+    const controlMeshes = {};
+    let renderFrames = 0;
     let clock = new THREE.Clock();
 
     // Interactive 3D Meshes
@@ -773,6 +733,7 @@ import './styles.css';
 
     function initThreeScene() {
       try {
+        lastScopePower=null;
         // Clear previous children if retrying
         while (container.firstChild) container.removeChild(container.firstChild);
         interactables.length = 0;
@@ -781,23 +742,25 @@ import './styles.css';
         scene.background = new THREE.Color('#101417');
         scene.fog = new THREE.FogExp2('#101417', 0.11);
 
-        camera = new THREE.PerspectiveCamera(window.innerWidth < 640 ? 48 : 38, window.innerWidth / window.innerHeight, 0.1, 30);
+        camera = new THREE.PerspectiveCamera(38, 1, 0.1, 40);
         camera.position.copy(baseCameraPos);
         camera.lookAt(baseLookAt);
 
         renderer = new THREE.WebGLRenderer({ antialias: state.highQuality, powerPreference: 'high-performance' });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        resizeRadioStage();
         renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, state.highQuality ? 2 : 1.15));
         renderer.shadowMap.enabled = state.highQuality;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
         renderer.toneMappingExposure = 1.08;
         container.appendChild(renderer.domElement);
+        renderer.domElement.addEventListener('lostpointercapture',endKnobDrag);
 
         // Handle WebGL Context Lost / Restored gracefully
         renderer.domElement.addEventListener('webglcontextlost', (event) => {
           event.preventDefault();
           webglAvailable = false;
+          document.body.classList.remove('webgl-ready');
           const errBox = document.getElementById('webgl-error-box');
           if (errBox) {
             errBox.classList.remove('hidden');
@@ -807,6 +770,7 @@ import './styles.css';
 
         renderer.domElement.addEventListener('webglcontextrestored', () => {
           webglAvailable = true;
+          document.body.classList.add('webgl-ready');
           const errBox = document.getElementById('webgl-error-box');
           if (errBox) errBox.classList.add('hidden');
           drawFrequencyDialCanvas(state.powerOn);
@@ -818,9 +782,14 @@ import './styles.css';
         buildVintageShortwaveRadio();
         buildDustParticles();
         webglAvailable = true;
+        resizeRadioStage(true);
+        document.body.classList.add('webgl-ready');
       } catch (err) {
         webglAvailable = false;
-        console.error('Lỗi khởi tạo WebGL:', err);
+        document.body.classList.remove('webgl-ready');
+        document.getElementById('radio-fallback').hidden=false;
+        document.getElementById('radio-fallback').textContent='CHẾ ĐỘ HUD · Dùng thanh dò tần và anten bên dưới. Radio 3D chưa khả dụng trên trình duyệt này.';
+        console.warn('WebGL fallback:', err.message);
         const errBox = document.getElementById('webgl-error-box');
         if (errBox) {
           errBox.classList.remove('hidden');
@@ -835,6 +804,8 @@ import './styles.css';
       // Cold ambient night fill
       hemiLight = new THREE.HemisphereLight('#38536b', '#12100e', 0.45);
       scene.add(hemiLight);
+      const frontFill = new THREE.DirectionalLight('#d3c6a4', 1.05);
+      frontFill.position.set(.5,1.5,4);scene.add(frontFill);
 
       // Cold moonlight through rainy window behind the desk
       moonDirLight = new THREE.DirectionalLight('#547899', 0.85);
@@ -1066,7 +1037,7 @@ import './styles.css';
       rainCanvas.height = 512;
       rainCtx = rainCanvas.getContext('2d');
 
-      for (let i = 0; i < 65; i++) {
+      for (let i = 0; i < (state.highQuality ? 65 : 24); i++) {
         raindrops.push({
           x: Math.random() * 512,
           y: Math.random() * 512,
@@ -1439,6 +1410,12 @@ import './styles.css';
       interactables.push(tuningKnobMesh);
       radioGroup.add(tuningKnobMesh);
 
+      const labels=document.createElement('canvas'); labels.width=512;labels.height=48;
+      const labelContext=labels.getContext('2d');labelContext.fillStyle='#b8ab87';labelContext.font='bold 19px monospace';labelContext.textAlign='center';
+      for(const [text,x] of [['POWER',-.08],['VOL',.22],['TUNING',.75]]) labelContext.fillText(text,(x+.35)/1.4*512,32);
+      const labelPlate=new THREE.Mesh(new THREE.PlaneGeometry(1.4,.07),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(labels),transparent:true}));
+      labelPlate.position.set(.35,.16,.59);radioGroup.add(labelPlate);
+
       // 10. Multi-Segment Telescoping Whip Antenna on Back
       const antennaBase = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.055, 0.14, 16), brushedMetalMat);
       antennaBase.position.set(-0.92, 1.32, -0.35);
@@ -1453,6 +1430,16 @@ import './styles.css';
       radioGroup.add(antennaBase, seg1, seg2, segTip);
 
       scene.add(radioGroup);
+      radioGroup.updateWorldMatrix(true,true);
+      radioBounds = new THREE.Box3().setFromObject(mainBody);
+      for(const mesh of [tuningKnobMesh,volumeKnobMesh,powerHitBox]) radioBounds.union(new THREE.Box3().setFromObject(mesh));
+      controlMeshes.power=powerHitBox; controlMeshes.tuning=tuningKnobMesh; controlMeshes.volume=volumeKnobMesh;
+      for(const [type, mesh, width] of [['tuning',tuningKnobMesh,.52],['volume',volumeKnobMesh,.28]]) {
+        const hit=new THREE.Mesh(new THREE.BoxGeometry(width,type==='volume'?.29:.52,.20),new THREE.MeshBasicMaterial({visible:false}));
+        hit.position.copy(mesh.position); hit.position.z+=.04;
+        tagInteractableHierarchy(hit,type,type==='tuning'?'TUNING — KÉO ĐỂ DÒ SÓNG':'VOLUME — KÉO ĐỂ CHỈNH ÂM');
+        interactables.push(hit); radioGroup.add(hit);
+      }
     }
 
     // Helper: Recursively assign userData so raycaster identifies any child mesh of a Group
@@ -1587,7 +1574,7 @@ import './styles.css';
     }
 
     function buildDustParticles() {
-      const count = 110;
+      const count = state.highQuality ? 110 : 35;
       const geo = new THREE.BufferGeometry();
       const positions = new Float32Array(count * 3);
       for (let i = 0; i < count; i++) {
@@ -1611,8 +1598,11 @@ import './styles.css';
      *************************************************************************/
     const hudWaveCanvas = document.getElementById('hud-wave-canvas');
     const hudWaveCtx = hudWaveCanvas.getContext('2d');
+    let lastScopePower=null;
 
     function updateOscilloscopes(elapsedTime) {
+      if (!state.powerOn && lastScopePower===false) return;
+      lastScopePower=state.powerOn;
       const waveData = audio.getWaveformData();
       const specData = state.scopeMode === 'spectrum' ? audio.getSpectrumData() : null;
 
@@ -1744,21 +1734,7 @@ import './styles.css';
     let dragStartValue = 0;
     let lastTickFreq = state.frequency;
 
-    function isAnyOverlayOpen() {
-      const intro = document.getElementById('intro-overlay');
-      const journalBack = document.getElementById('journal-backdrop');
-      const settingsMod = document.getElementById('settings-modal');
-      const helpMod = document.getElementById('help-modal');
-      const victoryMod = document.getElementById('victory-modal');
-      return (
-        !document.getElementById('mission-modal').hidden ||
-        (intro && !intro.classList.contains('hidden') && !intro.classList.contains('pointer-events-none')) ||
-        (journalBack && !journalBack.classList.contains('hidden')) ||
-        (settingsMod && !settingsMod.classList.contains('hidden')) ||
-        (helpMod && !helpMod.classList.contains('hidden')) ||
-        (victoryMod && !victoryMod.classList.contains('hidden'))
-      );
-    }
+    function isAnyOverlayOpen() { return Boolean(overlays?.top()); }
 
     function resolveInteractType(hitObj) {
       let cur = hitObj;
@@ -1773,15 +1749,16 @@ import './styles.css';
 
     function onPointerDown(e) {
       if (!webglAvailable || !renderer || !renderer.domElement) return;
-      if (isAnyOverlayOpen()) return;
+      if (isAnyOverlayOpen() || activePointerId !== null || e.button > 0) return;
       if (e.target !== renderer.domElement) return;
 
       audio.init();
+      e.preventDefault();
 
       const x = e.clientX;
       const y = e.clientY;
-      pointer.x = (x / window.innerWidth) * 2 - 1;
-      pointer.y = -(y / window.innerHeight) * 2 + 1;
+      const coords = pointerCoordinates(x,y,renderer.domElement.getBoundingClientRect());
+      pointer.set(coords.x,coords.y);
 
       raycaster.setFromCamera(pointer, camera);
       const hits = raycaster.intersectObjects(interactables, true);
@@ -1817,23 +1794,18 @@ import './styles.css';
     function onPointerMove(e) {
       const x = e.clientX;
       const y = e.clientY;
-      pointerNorm.x = (x / window.innerWidth) * 2 - 1;
-      pointerNorm.y = -(y / window.innerHeight) * 2 + 1;
+      if (!renderer?.domElement) return;
+      const coords=pointerCoordinates(x,y,renderer.domElement.getBoundingClientRect());
+      pointerNorm.set(coords.x,coords.y);
+      if (activePointerId !== null && e.pointerId !== activePointerId) return;
 
-      if (activeDragType === 'tuning') {
-        const dx = x - dragStartX;
-        const dy = dragStartY - y;
-        const fineScale = e.shiftKey ? 0.0035 : 0.0115;
-        const delta = (dx + dy * 0.5) * fineScale;
-        setTargetFrequency(dragStartValue + delta);
-        return;
-      }
-
-      if (activeDragType === 'volume') {
-        const dx = x - dragStartX;
-        const dy = dragStartY - y;
-        const delta = (dx + dy) * 0.004;
-        setMasterVolume(dragStartValue + delta);
+      if (activeDragType) {
+        if (isAnyOverlayOpen()) { endKnobDrag(); return; }
+        e.preventDefault();
+        dragStartValue=accumulateDrag(dragStartValue,activeDragType,x-dragStartX,dragStartY-y,e.shiftKey,e.pointerType==='touch');
+        if (activeDragType==='tuning') setTargetFrequency(dragStartValue);
+        else setMasterVolume(dragStartValue);
+        dragStartX=x; dragStartY=y;
         return;
       }
 
@@ -1860,61 +1832,17 @@ import './styles.css';
     }
 
     function endKnobDrag() {
-      if (activeDragType) {
-        if (renderer && renderer.domElement && activePointerId !== null) {
-          try { renderer.domElement.releasePointerCapture(activePointerId); } catch (_) {}
-        }
-        activeDragType = null;
-        activePointerId = null;
-        container.style.cursor = 'grab';
-        saveProgress();
-      }
+      if (!activeDragType) return;
+      const id=activePointerId; activeDragType=null; activePointerId=null;
+      if (renderer?.domElement && id!==null && renderer.domElement.hasPointerCapture(id)) renderer.domElement.releasePointerCapture(id);
+      container.style.cursor='grab'; saveProgress();
     }
 
     window.addEventListener('pointerdown', onPointerDown);
-    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointermove', onPointerMove, {passive:false});
     window.addEventListener('pointerup', endKnobDrag);
     window.addEventListener('pointercancel', endKnobDrag);
-    window.addEventListener('blur', endKnobDrag);
 
-    // Keyboard Support with Modal & Input Guard
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeJournalDrawer();
-        closeSettingsModal();
-        closeHelpModal();
-        if (mission.status === 'playing') pauseMission();
-        else if (mission.status === 'paused' && document.getElementById('intro-overlay').classList.contains('hidden')) resumeMission();
-        return;
-      }
-      // Do not trigger radio hotkeys if an overlay/modal is open or user is interacting with an input
-      const tag = document.activeElement ? document.activeElement.tagName : '';
-      if (isAnyOverlayOpen() || tag === 'INPUT' || tag === 'TEXTAREA') return;
-
-      if (e.key === 'p' || e.key === 'P') {
-        audio.init();
-        togglePower();
-      } else if (e.key === 'm' || e.key === 'M') {
-        audio.init();
-        toggleMute();
-      } else if (e.key === 'j' || e.key === 'J') {
-        openJournalDrawer('tab-clues');
-      } else if (e.key === 'k' || e.key === 'K') {
-        openJournalDrawer('tab-workbench');
-      } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
-        e.preventDefault();
-        audio.init();
-        const step = e.shiftKey ? 0.01 : 0.03;
-        setTargetFrequency(state.targetFrequency + step);
-        saveProgress();
-      } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
-        e.preventDefault();
-        audio.init();
-        const step = e.shiftKey ? 0.01 : 0.03;
-        setTargetFrequency(state.targetFrequency - step);
-        saveProgress();
-      }
-    });
 
     /*************************************************************************
      * 9. STATE TRANSITIONS, TUNING INERTIA & 2-SECOND LOCKING LOGIC
@@ -1972,7 +1900,7 @@ import './styles.css';
     let lastBandMemorySave = 0;
     let lastBandChartPaint = 0;
     function sampleBandMemory(nowMs) {
-      if (!state.powerOn || document.hidden || nowMs - lastBandMemorySample < 135) return;
+      if (!state.powerOn || document.hidden || isAnyOverlayOpen() || nowMs - lastBandMemorySample < 135) return;
       lastBandMemorySample = nowMs;
       const i = THREE.MathUtils.clamp(Math.round((state.frequency - 3.00) * 50), 0, 450);
       const reading = Math.round(state.signalStrength * 100);
@@ -2495,20 +2423,11 @@ import './styles.css';
         drawBandMemory();
         renderOperatorEvents();
       }
-      journalBackdrop.classList.remove('hidden');
-      requestAnimationFrame(() => {
-        journalBackdrop.classList.remove('opacity-0');
-        journalDrawer.classList.remove('translate-y-full', 'sm:translate-x-full');
-      });
+      renderArchive();
+      overlays.open('journal');
     }
 
-    function closeJournalDrawer() {
-      journalBackdrop.classList.add('opacity-0');
-      journalDrawer.classList.add('translate-y-full', 'sm:translate-x-full');
-      setTimeout(() => {
-        journalBackdrop.classList.add('hidden');
-      }, 260);
-    }
+    function closeJournalDrawer() { overlays.close('journal'); }
 
     function switchJournalTab(tabId) {
       document.getElementById('tab-clues').classList.toggle('hidden', tabId !== 'tab-clues');
@@ -2593,15 +2512,15 @@ import './styles.css';
      *************************************************************************/
     document.getElementById('btn-start-session').addEventListener('click', () => {
       audio.init();
+      overlays.close('intro', {restoreFocus:false});
+      if (storageSession.legacy) { storageSession.legacy=null; legacyDecision='declined'; document.getElementById('legacy-recovery').hidden=true; }
       if (mission.status === 'briefing') mission = createMission(document.getElementById('difficulty').value);
       if (mission.status === 'won') showVictoryReport();
       else if (mission.status === 'lost') showMissionModal();
       else mission.status = 'playing';
       if (!state.powerOn && ['playing','won'].includes(mission.status)) togglePower();
       saveProgress();
-      const intro = document.getElementById('intro-overlay');
-      intro.classList.add('opacity-0', 'pointer-events-none');
-      setTimeout(() => intro.classList.add('hidden'), 500);
+
     });
 
     btnHudPower.addEventListener('click', () => {
@@ -2756,12 +2675,10 @@ import './styles.css';
     // Settings Modal
     const settingsModal = document.getElementById('settings-modal');
     function closeSettingsModal() {
-      settingsModal.classList.add('hidden');
-      settingsModal.classList.remove('flex');
+      overlays.close('settings');
     }
     document.getElementById('btn-sound').addEventListener('click', () => {
-      settingsModal.classList.remove('hidden');
-      settingsModal.classList.add('flex');
+      overlays.open('settings');
     });
     document.getElementById('btn-close-settings').addEventListener('click', closeSettingsModal);
 
@@ -2793,7 +2710,8 @@ import './styles.css';
     });
 
     function resetAllProgress() {
-      try { localStorage.removeItem(STORAGE_KEY); } catch {}
+      overlays.clear();
+      overlays.open('intro');
       holdingCapture = false;
       if (activeTranscriptTimer) clearInterval(activeTranscriptTimer);
       mission = createMission(document.getElementById('difficulty').value);
@@ -2801,9 +2719,8 @@ import './styles.css';
       state.radioState = GAME_STATE.OFF;
       state.warmUpLevel = 0;
       state.signalStrength = 0;
-      document.getElementById('mission-modal').hidden = true;
-      const intro = document.getElementById('intro-overlay');
-      intro.classList.remove('hidden','opacity-0','pointer-events-none');
+      overlays.close('mission');
+
       document.getElementById('difficulty').disabled = false;
       document.getElementById('btn-start-session').textContent = 'NHẬN CA TRỰC →';
       document.getElementById('resume-notice').textContent = '';
@@ -2834,8 +2751,7 @@ import './styles.css';
       updateDecoderUI();
       updateHUD();
       closeSettingsModal();
-      document.getElementById('victory-modal').classList.add('hidden');
-      document.getElementById('victory-modal').classList.remove('flex');
+      overlays.close('victory');
       drawFrequencyDialCanvas(false);
       saveProgress();
       renderMissionPanel();
@@ -2844,41 +2760,45 @@ import './styles.css';
     document.getElementById('btn-reset-progress').addEventListener('click', resetAllProgress);
     document.getElementById('btn-replay-reset').addEventListener('click', resetAllProgress);
     document.getElementById('btn-continue-freeplay').addEventListener('click', () => {
-      document.getElementById('victory-modal').classList.add('hidden');
-      document.getElementById('victory-modal').classList.remove('flex');
+      overlays.close('victory');
+      audio.init();
     });
 
     // Help Modal
     const helpModal = document.getElementById('help-modal');
     function closeHelpModal() {
-      helpModal.classList.add('hidden');
-      helpModal.classList.remove('flex');
+      overlays.close('help');
     }
     document.getElementById('btn-help').addEventListener('click', () => {
-      helpModal.classList.remove('hidden');
-      helpModal.classList.add('flex');
+      overlays.open('help');
     });
     document.getElementById('btn-close-help').addEventListener('click', closeHelpModal);
 
-    // Responsive Window Resize Handler
-    window.addEventListener('resize', () => {
+    function resizeRadioStage(immediate = false) {
       if (!renderer || !camera) return;
-      camera.aspect = window.innerWidth / window.innerHeight;
-      // Adjust FOV slightly on portrait mobile screens so the entire radio stays framed
-      camera.fov = window.innerWidth < 640 ? 48 : 38;
+      const rect=container.getBoundingClientRect();
+      if (rect.width<1 || rect.height<1) return;
+      renderer.setSize(rect.width,rect.height);
+      camera.aspect=rect.width/rect.height;
+      if (radioBounds) {
+        frameTarget=frameRadio(radioBounds,camera.aspect);
+        camera.fov=frameTarget.fov;
+        if(immediate) camera.position.copy(frameTarget.position);
+      }
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
+    }
+    new ResizeObserver(()=>{ releaseAllInput(); resizeRadioStage(); }).observe(container);
 
     /*************************************************************************
      * 12. MAIN RENDER & SIMULATION LOOP (SINGLE RAF LOOP)
      *************************************************************************/
     let rainFrameCounter = 0;
+    const nightColor=new THREE.Color('#547899'), dawnColor=new THREE.Color('#f2b66d');
 
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(0.1, clock.getDelta());
-      const elapsed = clock.getElapsedTime();
+      const elapsed = clock.elapsedTime;
       const nowMs = performance.now();
 
       const blocked = isAnyOverlayOpen() || document.hidden;
@@ -2886,7 +2806,7 @@ import './styles.css';
       updateRadioSimulation(dt, nowMs);
       if (!blocked) updateMission(dt);
       renderMissionPanel();
-      if (mission.status === 'playing' && nowMs-lastMissionSave > 1000) { saveProgress(); lastMissionSave = nowMs; }
+      if (mission.status === 'playing' && !blocked && nowMs-lastMissionSave > 1000) { saveProgress(); lastMissionSave = nowMs; }
       updateOscilloscopes(elapsed);
 
       // Update 1974 Analog Desk Clock hands (starts at 23:42 and advances smoothly)
@@ -2902,7 +2822,7 @@ import './styles.css';
       if (state.gameCompleted && state.dawnProgress < 1.0) {
         state.dawnProgress = Math.min(1.0, state.dawnProgress + dt * 0.18);
         if (moonDirLight) {
-          moonDirLight.color.lerpColors(new THREE.Color('#547899'), new THREE.Color('#f2b66d'), state.dawnProgress);
+          moonDirLight.color.lerpColors(nightColor, dawnColor, state.dawnProgress);
           moonDirLight.intensity = 0.85 + state.dawnProgress * 0.9;
         }
         if (hemiLight) {
@@ -2937,38 +2857,24 @@ import './styles.css';
         dustParticles.position.y = Math.sin(elapsed * 0.4) * 0.04;
       }
 
-      // Subtle pointer camera parallax + subtle zoom response when tuning or locking
-      if (camera && webglAvailable) {
-        const parallaxFactor = state.reducedMotion ? 0.0 : 0.13;
-        const targetZoom = state.reducedMotion
-          ? 0
-          : (activeDragType === 'tuning' ? -0.18 : (state.radioState === GAME_STATE.DECODED ? -0.12 : 0));
-        cameraZoomOffset = THREE.MathUtils.lerp(cameraZoomOffset, targetZoom, dt * 3.2);
-
-        const idleSwayX = state.reducedMotion ? 0 : Math.sin(elapsed * 0.45) * 0.018;
-        const idleSwayY = state.reducedMotion ? 0 : Math.cos(elapsed * 0.35) * 0.012;
-
-        const targetX = baseCameraPos.x + pointerNorm.x * parallaxFactor + idleSwayX;
-        const targetY = baseCameraPos.y + pointerNorm.y * (parallaxFactor * 0.65) + idleSwayY;
-        const targetZ = baseCameraPos.z + cameraZoomOffset;
-
-        camera.position.x = THREE.MathUtils.lerp(camera.position.x, targetX, dt * 3.5);
-        camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetY, dt * 3.5);
-        camera.position.z = THREE.MathUtils.lerp(camera.position.z, targetZ, dt * 3.5);
-        camera.lookAt(baseLookAt);
+      if (camera && frameTarget && webglAvailable) {
+        const alpha=state.reducedMotion?1:1-Math.exp(-dt*9);
+        camera.position.lerp(frameTarget.position,alpha);
+        camera.lookAt(frameTarget.center);
       }
 
       if (webglAvailable && renderer && scene && camera) {
-        renderer.render(scene, camera);
+        renderer.render(scene, camera); renderFrames++;
       }
     }
 
     // Persist the final few signal samples when leaving the tab.
-    window.addEventListener('pagehide', saveProgress);
+    window.addEventListener('pagehide', () => saveProgress(true));
 
     // Boot Application
     window.addEventListener('DOMContentLoaded', () => {
       loadProgress();
+      overlays.open('intro');
       initializeMissionUI();
       operatorNoteEl.value = state.operatorNote;
       renderOperatorEvents();
@@ -3064,6 +2970,8 @@ function renderMissionPanel() {
     const next = CHANNELS.find(c => !mission.collected.includes(c.id));
     objective.textContent = `Mục tiêu: ${next.label}, vùng ${(next.freq-.1).toFixed(1)}–${(next.freq+.1).toFixed(1)} MHz. Anten khoảng ${next.bearing}°. Thu các trạm theo thứ tự bất kỳ.`;
   }
+  const nextTarget=CHANNELS.find(c=>!mission.collected.includes(c.id));
+  document.getElementById('mobile-objective-label').textContent=mission.unlocked?'CHRONOS · ANTEN 80°':mission.collected.length===5?'ĐỦ 5 BẢN TIN · MỞ KHÓA SỐ':`${nextTarget.label} · ${(nextTarget.freq-.1).toFixed(1)}–${(nextTarget.freq+.1).toFixed(1)} MHz · ${nextTarget.bearing}°`;
   const nearest = getNearestStationInfo(state.frequency);
   const channel = nearest.station;
   const duration = captureDuration(mission, channel.id);
@@ -3089,28 +2997,28 @@ function missionSummary() {
 }
 function showMissionModal() {
   const lost = mission.status === 'lost';
-  document.getElementById('mission-modal').hidden = false;
+
   document.getElementById('mission-modal-title').textContent = lost ? 'Tín hiệu đã tắt.' : 'Ca trực tạm dừng.';
   document.getElementById('mission-modal-text').textContent = lost ? (mission.reason==='battery' ? 'Ắc quy cạn kiệt. Trạm 07 không còn đủ năng lượng để giữ liên lạc.' : 'Cửa sổ liên lạc đã khép lại. Bão từ nuốt chửng tín hiệu cuối cùng.') : 'Đồng hồ, pin và nhiệt đã dừng. Ca trực được lưu trên trình duyệt này.';
   document.getElementById('mission-summary').innerText = missionSummary();
   document.getElementById('btn-resume').hidden = lost;
+  overlays.open('mission');
   (lost ? document.getElementById('btn-new-shift') : document.getElementById('btn-resume')).focus();
 }
 function pauseMission() {
   if (mission.status !== 'playing') return;
-  holdingCapture=false; mission.status='paused'; saveProgress(); showMissionModal(); audio.updateAudioState();
+  releaseAllInput(); mission.status='paused'; saveProgress(); showMissionModal(); audio.updateAudioState();
 }
 function resumeMission() {
   if (mission.status !== 'paused') return;
-  mission.status='playing'; document.getElementById('mission-modal').hidden=true;
+  mission.status='playing'; overlays.close('mission');
   audio.init(); audio.updateAudioState(); saveProgress();
 }
 function showVictoryReport() {
   let best=mission.score;
   try { const key=`tlf_best_${mission.difficulty}`; best=Math.max(Number(localStorage.getItem(key))||0,mission.score); localStorage.setItem(key,String(best)); } catch {}
   document.getElementById('victory-score').innerText = `${missionSummary()}\nKỶ LỤC ĐỘ KHÓ NÀY: ${best}`;
-  document.getElementById('victory-modal').classList.remove('hidden');
-  document.getElementById('victory-modal').classList.add('flex');
+  overlays.open('victory');
 }
 function runScan() {
   if (!state.powerOn || isAnyOverlayOpen()) { feedback('Bật PWR trước khi quét sóng.'); return; }
@@ -3129,23 +3037,17 @@ function coolMachine() {
 const captureButton=document.getElementById('btn-capture');
 captureButton.addEventListener('pointerdown',e=>{
   if (captureButton.disabled || isAnyOverlayOpen()) return;
-  e.preventDefault(); captureButton.setPointerCapture(e.pointerId); holdingCapture=true; audio.init();
+  e.preventDefault(); capturePointerId=e.pointerId; captureButton.setPointerCapture(e.pointerId); holdingCapture=true; audio.init();
 });
-function releaseCapture() { holdingCapture=false; }
+function releaseCapture() {
+  holdingCapture=false;
+  const id=capturePointerId; capturePointerId=null;
+  if(id!==null && captureButton.hasPointerCapture(id)) captureButton.releasePointerCapture(id);
+}
+function releaseAllInput() { releaseCapture(); endKnobDrag(); }
 captureButton.addEventListener('lostpointercapture', releaseCapture);
 window.addEventListener('pointerup',releaseCapture);
 window.addEventListener('pointercancel',releaseCapture);
-window.addEventListener('keyup',e=>{ if(e.code==='Space') releaseCapture(); });
-window.addEventListener('blur',()=>{ releaseCapture(); if (!isAnyOverlayOpen()) pauseMission(); });
-document.addEventListener('visibilitychange',()=>{ if(document.hidden) pauseMission(); });
-window.addEventListener('keydown',e=>{
-  const element=document.activeElement;
-  if (isAnyOverlayOpen() || element?.tagName==='TEXTAREA' || element?.tagName==='SELECT' || (element?.tagName==='INPUT' && element.type!=='range')) return;
-  if(e.code==='Space') { e.preventDefault(); if(!captureButton.disabled) holdingCapture=true; }
-  if(e.repeat) return;
-  if(e.code==='KeyR') runScan();
-  if(e.code==='KeyC') coolMachine();
-});
 document.getElementById('btn-scan').addEventListener('click',runScan);
 document.getElementById('btn-coolant').addEventListener('click',coolMachine);
 document.getElementById('btn-pause').addEventListener('click',pauseMission);
@@ -3155,9 +3057,71 @@ document.getElementById('antenna').addEventListener('input',e=>{ mission.antenna
 document.getElementById('antenna').addEventListener('change',saveProgress);
 
 setupMobileLayout({
-  releaseCapture,
+  releaseCapture: releaseAllInput,
   pause: pauseMission,
   openJournal: openJournalDrawer,
   openSettings: () => document.getElementById('btn-sound').click(),
   openHelp: () => document.getElementById('btn-help').click()
 });
+
+const definition = (id, initialFocus) => ({ element:document.getElementById(id), initialFocus,
+  show(){this.element.hidden=false;this.element.classList.remove('hidden','opacity-0','pointer-events-none');this.element.classList.add('flex');},
+  hide(){this.element.hidden=true;this.element.classList.add('hidden');this.element.classList.remove('flex');} });
+const journalDefinition = { element:journalDrawer, backdrop:journalBackdrop, initialFocus:'#btn-close-journal',
+  show(){ journalDrawer.hidden=false; journalBackdrop.classList.remove('hidden','opacity-0'); journalDrawer.classList.remove('translate-y-full','sm:translate-x-full'); },
+  hide(){ journalDrawer.hidden=true; journalBackdrop.classList.add('hidden','opacity-0'); journalDrawer.classList.add('translate-y-full','sm:translate-x-full'); } };
+overlays=createOverlayManager({intro:definition('intro-overlay'),journal:journalDefinition,settings:definition('settings-modal','#btn-close-settings'),
+  help:definition('help-modal','#btn-close-help'),victory:definition('victory-modal','#btn-continue-freeplay'),mission:definition('mission-modal')},
+  ()=>{ releaseAllInput(); audio.updateAudioState(); });
+setupInputManager({overlays,
+  escape(){ const action=escapeAction(overlays.stack(),mission.status);
+    if(action.type==='close') overlays.close(action.id);
+    else if(action.type==='pause') pauseMission(); else if(action.type==='resume') resumeMission(); },
+  actions:{ power(){audio.init();togglePower();},mute:toggleMute,journal:()=>openJournalDrawer(),workbench:()=>openJournalDrawer('tab-workbench'),scan:runScan,coolant:coolMachine,
+    capture(){if(!captureButton.disabled && mission.status==='playing') holdingCapture=true;},
+    left(e){setTargetFrequency(state.targetFrequency-(e.shiftKey?.01:.03));saveProgress();},
+    right(e){setTargetFrequency(state.targetFrequency+(e.shiftKey?.01:.03));saveProgress();} },
+  release:releaseAllInput,
+  blur(){if(!isAnyOverlayOpen())pauseMission();},
+  visibility(hidden){if(hidden){pauseMission();saveProgress(true);audio.ctx?.suspend().catch(()=>{});}
+    else if(state.powerOn && !isAnyOverlayOpen())audio.ctx?.resume().catch(()=>{});}
+});
+function renderArchive() {
+  const section=document.getElementById('legacy-archive'); section.hidden=!archive;
+  if(!archive)return;
+  document.getElementById('archive-notes').textContent=archive.operatorNote || '(Không có ghi chú cũ)';
+  document.getElementById('archive-stations').textContent=archive.discoveredIds.map(id=>STATIONS.find(s=>s.id===id).subtitle).join('\n\n') || '(Chưa có bản tin cũ)';
+}
+document.getElementById('btn-import-legacy').addEventListener('click',()=>{
+  const result=importLegacySave(storageAccess());
+  if(!result.ok){document.getElementById('storage-notice').textContent=result.error;return;}
+  applySave(result.save); storageSession.legacy=null;
+  document.getElementById('legacy-recovery').hidden=true;
+  document.getElementById('storage-notice').textContent='Đã khôi phục hồ sơ vào Archive. Ca Night Shift mới bắt đầu với tài nguyên mặc định.';
+  operatorNoteEl.value=state.operatorNote; initializeMissionUI(); renderArchive(); renderJournalStations(); renderStationChips(); drawBandMemory();
+  setMasterVolume(state.volume);document.getElementById('hud-freq-slider').value=Math.round(state.frequency*100);
+  const quality=document.getElementById('btn-quality-toggle');quality.textContent=state.highQuality?'CAO (HIGH)':'TIẾT KIỆM (LOW)';quality.classList.toggle('active-amber',state.highQuality);
+  const motion=document.getElementById('btn-reduced-motion');motion.textContent=state.reducedMotion?'BẬT (ON)':'TẮT';motion.classList.toggle('active-amber',state.reducedMotion);
+  const mute=document.getElementById('btn-mute-toggle');mute.textContent=state.muted?'ĐANG TẮT TIẾNG (MUTED)':'ĐANG BẬT TIẾNG';mute.classList.toggle('active-amber',state.muted);
+  if(renderer){renderer.setPixelRatio(Math.min(devicePixelRatio||1,state.highQuality?2:1.15));renderer.shadowMap.enabled=state.highQuality;}
+
+});
+document.getElementById('btn-decline-legacy').addEventListener('click',()=>{
+  storageSession.legacy=null;legacyDecision='declined';document.getElementById('legacy-recovery').hidden=true;saveProgress(true);
+});
+// Read-only diagnostics for integration tests and development tools, never a second state source.
+export function getRadioDiagnostics() {
+  const rect=renderer?.domElement?.getBoundingClientRect();
+  const controls={};
+  if(camera && rect) for(const [id,mesh] of Object.entries(controlMeshes)){
+    const v=mesh.getWorldPosition(new THREE.Vector3());v.z+=.06;v.project(camera);
+    controls[id]={x:rect.left+(v.x+1)*rect.width/2,y:rect.top+(1-v.y)*rect.height/2};
+  }
+  return {webgl:webglAvailable,controls,frequency:state.frequency,targetFrequency:state.targetFrequency,volume:state.volume,powerOn:state.powerOn,
+    missionStatus:mission.status,holdingCapture,drag:activeDragType,knobRotation:tuningKnobMesh?.rotation.z,volumeRotation:volumeKnobMesh?.rotation.z,
+    powerRotation:powerSwitchPivot?.rotation.x,audioState:audio.ctx?.state,audioTime:audio.ctx?.currentTime,
+    audioGain:audio.masterGain?.gain.value,rainGain:audio.rainGain?.gain.value,audioInitialized:audio.initialized,schedulerActive:Boolean(audio.schedulerTimer),renderFrames,
+    scopeVersion:scopeTexture?.version,textures:renderer?.info.memory.textures,geometries:renderer?.info.memory.geometries,overlay:overlays.top()};
+}
+
+if (import.meta.env.DEV) Object.defineProperty(window,'__radioDiagnostics',{value:getRadioDiagnostics,configurable:true});

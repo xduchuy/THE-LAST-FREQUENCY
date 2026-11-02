@@ -13,7 +13,10 @@ export function setupMobileLayout({ releaseCapture, pause, openJournal, openSett
   };
   const mission = byId('mission-panel');
   place(byId('receiver-hud'), byId('mobile-receiver'));
-  place(mission, byId('mobile-workspace'));
+  place(mission, byId('mobile-mission-content'));
+  place(byId('canvas-container'), byId('radio-stage'));
+  place(mission.querySelector('.shift-clock'),byId('mobile-receiver'));
+  place(mission.querySelector('.shift-resources'),byId('mobile-receiver'));
   place(byId('station-chips'), mission);
   for (const node of [mission.querySelector('.antenna-label'), byId('antenna'), mission.querySelector('.antenna-scale')]) {
     place(node, byId('mobile-antenna'));
@@ -30,6 +33,7 @@ export function setupMobileLayout({ releaseCapture, pause, openJournal, openSett
     const focused = document.activeElement;
     shell.hidden = !media.matches;
     document.body.classList.toggle('mobile-layout', media.matches);
+    byId('mobile-mission-details').open=false;
     if (media.matches) {
       for (const { node, target } of slots) target.append(node);
     } else {
@@ -49,16 +53,8 @@ export function setupMobileLayout({ releaseCapture, pause, openJournal, openSett
   window.visualViewport?.addEventListener('scroll', updateViewport);
   updateViewport();
   updateLayout();
-  const workspace = byId('mobile-workspace');
-  function updateScrollHint() {
-    workspace.classList.toggle('has-more', mission.scrollHeight - mission.clientHeight - mission.scrollTop > 12);
-  }
-  mission.addEventListener('scroll', updateScrollHint, { passive: true });
-  const scrollObserver = new ResizeObserver(updateScrollHint);
-  for (const node of [mission, byId('mission-feedback'), byId('station-chips')]) scrollObserver.observe(node);
-
   byId('btn-mobile-receiver').addEventListener('click', () => {
-    mission.scrollTo({ top: 0, behavior: 'auto' });
+    byId('mobile-mission-details').open=false;
   });
   byId('btn-mobile-journal').addEventListener('click', () => openJournal('tab-clues'));
   byId('btn-mobile-workbench').addEventListener('click', () => openJournal('tab-workbench'));

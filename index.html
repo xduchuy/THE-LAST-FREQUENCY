@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>THE LAST FREQUENCY — NIGHT SHIFT (1974)</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23242b20'/%3E%3Cpath d='M5 17h5l3-8 5 16 3-8h6' fill='none' stroke='%23c8a365' stroke-width='2'/%3E%3C/svg%3E" />
+  <title>THE LAST FREQUENCY V3.1 — IMMERSIVE RADIO CONSOLE</title>
   <style>
     /* =====================================================================
      * V2.1 DESIGN TOKENS — 1974 WEATHERED ANALOG INSTRUMENTATION PALETTE
@@ -572,7 +573,7 @@
         THE LAST FREQUENCY
       </h1>
       <p class="font-mono-tech text-[11px] uppercase tracking-widest text-[#C89049] mb-4">
-        NIGHT SHIFT // MỘT CA TRỰC. NĂM TÍN HIỆU. MỘT CƠ HỘI.
+        V3.1 // IMMERSIVE RADIO CONSOLE — NIGHT SHIFT
       </p>
 
       <!-- Briefing Note on Yellowed Paper -->
@@ -607,6 +608,12 @@
       </div>
 
       <div class="shift-brief"><label for="difficulty">CHỌN CA TRỰC</label><select id="difficulty"><option value="cadet">Tân binh · 18 phút · sóng ổn định</option><option value="operator" selected>Điện báo viên · 12 phút · bão từ</option><option value="veteran">Cựu binh · 9 phút · trôi sóng mạnh</option></select><p>Thu đủ 5 bản tin → giải khóa CHRONOS → phát SOS 8 giây. Hết pin hoặc hết giờ: mất liên lạc. Tắt PWR để sạc; dùng 3 bình làm mát khi máy nóng. Hồ sơ và menu tự dừng đồng hồ.</p><span id="resume-notice"></span></div>
+      <section id="legacy-recovery" class="paper-document p-3 mb-3 text-xs" hidden>
+        <strong>ĐÃ PHÁT HIỆN HỒ SƠ VÔ TUYẾN CŨ</strong>
+        <p>Khôi phục ghi chú, bản tin và cài đặt vào Archive. Ca Night Shift bắt đầu mới; điểm, tài nguyên và quyền mở khóa không chuyển từ V2.2.</p>
+        <div class="flex gap-2 mt-2"><button id="btn-import-legacy" class="btn-analog p-3">KHÔI PHỤC HỒ SƠ</button><button id="btn-decline-legacy" class="btn-analog p-3">CA MỚI</button></div>
+      </section>
+      <p id="storage-notice" role="status" class="text-xs mb-3 text-[#D7C8A5]"></p>
       <div class="flex flex-col sm:flex-row gap-3">
         <button id="btn-start-session" class="btn-analog active-amber flex-1 py-3 px-5 font-mono-tech text-xs sm:text-sm font-bold tracking-widest uppercase">
           NHẬN CA TRỰC →
@@ -644,7 +651,10 @@
         <button id="btn-mobile-pause" aria-label="Tạm dừng ca trực">II</button>
       </div>
     </header>
-    <section id="mobile-workspace" aria-label="Tình trạng ca trực"></section>
+    <section id="mobile-workspace" aria-label="Radio KESTREL SW-74 tương tác">
+      <div id="radio-stage"><p id="radio-fallback" hidden></p><span id="radio-gesture-hint">KESTREL SW-74 · CHẠM CÔNG TẮC / KÉO NÚM DÒ</span></div>
+      <details id="mobile-mission-details"><summary><span id="mobile-objective-label">LỆNH CA TRỰC</span><span aria-hidden="true">▴</span></summary><div id="mobile-mission-content"></div></details>
+    </section>
     <section id="mobile-dock" aria-label="Điều khiển máy thu">
       <div id="mobile-antenna"></div>
       <div id="mobile-tuning"></div>
@@ -926,6 +936,11 @@
           </div>
         </div>
 
+        <section id="legacy-archive" class="paper-document p-4" hidden>
+          <h4 class="font-bold">ARCHIVE V2.2 — HỒ SƠ CŨ</h4>
+          <p>Hồ sơ tham khảo từ ca cũ; không tính vào 5 bản tin của ca Night Shift này.</p>
+          <p id="archive-notes" class="whitespace-pre-wrap my-3"></p><div id="archive-stations" class="whitespace-pre-wrap"></div>
+        </section>
         <div id="journal-stations-list" class="space-y-3.5">
           <!-- Populated dynamically as 1974 paper intelligence slips -->
         </div>
@@ -1117,7 +1132,7 @@
             <span>ĐỘ LỢI ÂM TẦN (AF GAIN / VOLUME)</span>
             <span id="lbl-vol" class="text-[#C89049] font-bold">80%</span>
           </div>
-          <input id="slider-volume" type="range" min="0" max="100" value="80" class="retro-slider" />
+          <input aria-label="Âm lượng máy thu" id="slider-volume" type="range" min="0" max="100" value="80" class="retro-slider" />
         </div>
 
         <!-- Mute Toggle -->

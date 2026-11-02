@@ -1,2 +1,2 @@
 import { defineConfig } from 'vite';
-export default defineConfig({ build: { rollupOptions: { output: { manualChunks: { three: ['three'] } } } } });
+export default defineConfig({ server: { watch: { ignored: ['**/test-results/**','**/playwright-report/**'] } }, build: { rollupOptions: { output: { manualChunks: { three: ['three'] } } } } });

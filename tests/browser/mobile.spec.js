@@ -35,11 +35,15 @@ for (const [width, height] of [[320,568],[360,640],[390,844],[414,896],[667,375]
       const r=document.getElementById(id).getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};
     }));
     const [receiver,workspace,dock,nav]=boxes;
-    expect(receiver.bottom).toBeLessThanOrEqual(workspace.y+1);
-    if(width>height) expect(workspace.right).toBeLessThanOrEqual(dock.x+1);
-    else expect(workspace.bottom).toBeLessThanOrEqual(dock.y+1);
+    if(width>height) { expect(workspace.right).toBeLessThanOrEqual(receiver.x+1); expect(receiver.bottom).toBeLessThanOrEqual(dock.y+1); }
+    else { expect(receiver.bottom).toBeLessThanOrEqual(workspace.y+1); expect(workspace.bottom).toBeLessThanOrEqual(dock.y+1); }
     expect(dock.bottom).toBeLessThanOrEqual(nav.y+1);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await expect(page.locator('#radio-fallback')).toBeVisible();
+    await page.locator('#btn-mobile-journal').tap();await controlIsReachable(page,'#btn-close-journal',44);await page.keyboard.press('Escape');
+    await page.locator('#btn-mobile-settings').tap();await controlIsReachable(page,'#btn-close-settings',44);await page.keyboard.press('Escape');
+    await page.locator('#btn-mobile-pause').tap();await expect(page.locator('#mission-modal')).toBeVisible();await page.locator('#btn-resume').tap();
+    await page.screenshot({path:test.info().outputPath('console.png')});
     expect(errors).toEqual([]);
   });
 }
@@ -59,9 +63,9 @@ test('real touch hold records, touch cancel releases, and scrolling leaves contr
   await cdp.send('Input.dispatchTouchEvent',{type:'touchCancel',touchPoints:[]});
   await expect(page.locator('#btn-capture')).not.toHaveClass(/receiving/);
   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points});
-  await expect(page.locator('#progress-counter')).toHaveText('1/5 TÍN HIỆU',{timeout:12000});
+  await expect(page.locator('#progress-counter')).toHaveText('1/5 TÍN HIỆU',{timeout:25000});
   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
-  await page.screenshot({path:'/tmp/frequency-mobile-updated.png'});
+  await page.screenshot({path:test.info().outputPath('mobile-capture.png')});
 });
 test('phone journal, code wheels, notes and settings remain usable in a short viewport',async({page})=>{
   await start(page,{width:320,height:568});

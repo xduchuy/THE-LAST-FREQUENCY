@@ -16,6 +16,8 @@ let legacyDecision = null;
 let pendingSaveTimer = null;
 let lastStorageWrite = -Infinity;
 let capturePointerId = null;
+import { createMinimalUI } from './minimal-ui.js';
+const minimalUI=createMinimalUI();
 import { setupMobileLayout } from './mobile-layout.js';
 import { CHANNELS, DIFFICULTIES, createMission, restoreMission, stormAt, carrierFrequency, antennaGain, captureDuration, scan, useCoolant, submitCode } from './mission.js';
 let mission = createMission();
@@ -803,7 +805,7 @@ import './styles.css';
         webglAvailable = false;
         document.body.classList.remove('webgl-ready');
         document.getElementById('radio-fallback').hidden=false;
-        document.getElementById('radio-fallback').textContent='CHẾ ĐỘ HUD · Dùng thanh dò tần và anten bên dưới. Radio 3D chưa khả dụng trên trình duyệt này.';
+        document.getElementById('radio-fallback').textContent='ĐIỀU KHIỂN DỰ PHÒNG · RADIO 3D CHƯA KHẢ DỤNG';
         console.warn('WebGL fallback:', err.message);
         const errBox = document.getElementById('webgl-error-box');
         if (errBox) {
@@ -1676,7 +1678,7 @@ import './styles.css';
       }
 
       // 2. Update HUD Mini Oscilloscope / Spectrum (with Phosphor Persistence, Graticule & Signal Brightness)
-      if (hudWaveCtx) {
+      if (hudWaveCtx && overlays?.top()==='operations' && document.getElementById('instrument-details').open) {
         const w = hudWaveCanvas.width;
         const h = hudWaveCanvas.height;
         // Subtle persistence trail instead of hard clear
@@ -1933,7 +1935,7 @@ import './styles.css';
         }
       }
       // The chart is only repainted while its journal tab is visible.
-      if (!document.getElementById('tab-workbench').classList.contains('hidden') && nowMs - lastBandChartPaint > 145) {
+      if (overlays?.top()==='journal' && !document.getElementById('tab-workbench').classList.contains('hidden') && nowMs - lastBandChartPaint > 145) {
         lastBandChartPaint = nowMs;
         drawBandMemory();
       }
@@ -2370,52 +2372,24 @@ import './styles.css';
         const logTime = `14.11.1974 // 23:${42 + idx * 3} GMT`;
 
         if (isFound) {
-          card.className = 'paper-document p-4 font-typewriter transition';
+          card.className = 'paper-document signal-record font-typewriter';
           card.innerHTML = `
-            <div class="flex flex-wrap items-center justify-between border-b border-[#795843]/40 pb-1.5 mb-2 gap-1">
-              <div>
-                <div class="text-[10px] font-mono-tech text-[#795843] font-bold">
-                  PHIẾU THU SÓNG SỐ: ${logNumber} // ${logTime}
-                </div>
-                <div class="text-xs sm:text-sm font-bold text-[#23211D]">
-                  ${st.freq.toFixed(2)} MHz — ${st.name}
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="ink-stamp">DECODED</span>
-                <button data-tune="${st.freq}" class="btn-journal-retune btn-analog px-2 py-1 font-mono-tech text-[10px]">
-                  QUAY TỚI ĐÀI ↻
-                </button>
-              </div>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-between text-[10px] font-mono-tech bg-[#cbb993]/60 px-2 py-1 border border-[#8c7b5b] mb-2">
-              <span><strong>CALLSIGN:</strong> ${st.callsign}</span>
-              <span><strong>PHÂN LOẠI:</strong> <code>${st.morseDisplay}</code></span>
-            </div>
-
-            <p class="text-xs text-[#23211D] italic mb-2.5 leading-relaxed bg-[#e6dcc2]/70 p-2.5 border-l-2 border-[#795843]">
-              ${st.subtitle}
-            </p>
-
-            <div class="p-2.5 bg-[#d1c097] border border-[#795843]/60 text-xs text-[#23211D] leading-relaxed">
-              <div class="text-[10px] font-bold uppercase text-[#795843] mb-0.5">✎ GHI CHÚ BÀN TRỰC (${st.clueTitle}):</div>
-              <div>${st.clueText}</div>
-            </div>
+            <header class="log-record-heading">
+              <div><small>PHIẾU ${logNumber} / ${logTime}</small><h4>${st.freq.toFixed(2)} MHz — ${st.name}</h4></div>
+              <button data-tune="${st.freq}" class="btn-journal-retune btn-analog px-2 py-1 text-xs">QUAY TỚI ĐÀI ↻</button>
+            </header>
+            <p class="log-metadata">CALLSIGN: <strong>${st.callsign}</strong> / <code>${st.morseDisplay}</code></p>
+            <blockquote class="log-transcript">${st.subtitle}</blockquote>
+            <section class="log-clue"><h5>GHI CHÚ BÀN TRỰC / ${st.clueTitle}</h5><div>${st.clueText}</div></section>
           `;
         } else {
           const regionLabel = state.assistMode ? st.bandHint : 'CHƯA ĐỊNH VỊ DẢI TẦN';
-          card.className = 'paper-document-unlogged p-3.5 font-mono-tech transition';
+          card.className = 'paper-document-unlogged font-typewriter';
           card.innerHTML = `
-            <div class="flex items-center justify-between border-b border-[#555D55]/50 pb-1.5">
-              <span class="text-xs font-bold text-[#D7C8A5]/80">HỒ SƠ TRỐNG #${logNumber} // ${regionLabel}</span>
-              <span class="worn-label text-[9px] text-[#C89049]">CHƯA THU NHẬN</span>
-            </div>
-            <p class="text-[11px] text-[#D7C8A5]/65 mt-2 font-typewriter leading-relaxed">
-              ${state.assistMode
-                ? `[DỮ LIỆU QUÉT SƠ BỘ]: Phát hiện bức xạ sóng mang yếu trong khoảng ${st.bandHint}. Hãy xoay núm TUNING rà chậm và căn anten rồi giữ SPACE để thu bản tin.`
-                : '[BẢN GHI BỊ BỎ TRỐNG]: Chưa có dữ liệu giải điều chế. Hãy xoay núm TUNING rà dọc băng tần 3.00 – 12.00 MHz để bắt tín hiệu.'}
-            </p>
+            <header class="log-record-heading"><strong>PHIẾU ${logNumber}</strong><small>CHƯA THU NHẬN</small></header>
+            <p>${state.assistMode
+              ? `Dữ liệu quét sơ bộ: ${regionLabel}. Căn anten và giữ THU để lập phiếu.`
+              : 'Chưa có bản ghi. Dò sóng và giữ THU để lập phiếu.'}</p>
           `;
         }
         listEl.appendChild(card);
@@ -2437,6 +2411,7 @@ import './styles.css';
     const journalBackdrop = document.getElementById('journal-backdrop');
 
     function openJournalDrawer(tabId = 'tab-clues') {
+      overlays.close('operations');
       renderJournalStations();
       updateDecoderUI();
       switchJournalTab(tabId);
@@ -2454,9 +2429,11 @@ import './styles.css';
       document.getElementById('tab-clues').classList.toggle('hidden', tabId !== 'tab-clues');
       document.getElementById('tab-decoder').classList.toggle('hidden', tabId !== 'tab-decoder');
       document.getElementById('tab-workbench').classList.toggle('hidden', tabId !== 'tab-workbench');
+      document.getElementById('tab-notes').classList.toggle('hidden', tabId !== 'tab-notes');
       if (tabId === 'tab-workbench') { drawBandMemory(); renderOperatorEvents(); }
       document.querySelectorAll('.journal-tab').forEach((btn) => {
         const active = btn.dataset.tab === tabId;
+        btn.setAttribute('aria-pressed',String(active));
         btn.classList.toggle('border-[#A18B62]', active);
         btn.classList.toggle('bg-[#363b33]', active);
         btn.classList.toggle('text-[#E0D8C1]', active);
@@ -2703,6 +2680,7 @@ import './styles.css';
       overlays.close('settings');
     }
     document.getElementById('btn-sound').addEventListener('click', () => {
+      overlays.close('operations');
       overlays.open('settings');
     });
     document.getElementById('btn-close-settings').addEventListener('click', closeSettingsModal);
@@ -2796,6 +2774,7 @@ import './styles.css';
       overlays.close('help');
     }
     document.getElementById('btn-help').addEventListener('click', () => {
+      overlays.close('operations');
       overlays.open('help');
     });
     document.getElementById('btn-close-help').addEventListener('click', closeHelpModal);
@@ -2930,6 +2909,7 @@ import './styles.css';
 // NIGHT SHIFT — player input, mission UI and integration with the original radio.
 function feedback(message) {
   document.getElementById('mission-feedback').textContent = message;
+  minimalUI.notify(message);
 }
 function initializeMissionUI() {
   document.getElementById('difficulty').value = mission.difficulty;
@@ -2954,7 +2934,7 @@ function updateMission(now=performance.now(),active=!isAnyOverlayOpen()&&!docume
     const result=missionClock.advance(mission,now,active,readRadioInput());
     handleMissionEvents(result.events);
     if(result.stall && mission.status==='playing'){
-      feedback('Gián đoạn khung hình: đã tính thời gian và tài nguyên chờ; không ghi tín hiệu trong khoảng gián đoạn.');
+      feedback('Liên lạc gián đoạn. Căn lại sóng trước khi tiếp tục thu.');
     }
   }finally{clockUpdating=false;}
 }
@@ -2964,6 +2944,7 @@ function handleMissionEvents(events) {
       releaseCapture();
       onStationLocked([...STATIONS, FINAL_STATION].find(s => s.id === event.id));
       feedback(event.type === 'won' ? 'ĐÃ PHÁT SOS. MẠNG LƯỚI ĐƯỢC KHÔI PHỤC.' : `Đã lưu ${CHANNELS.find(c => c.id === event.id).label}. +7% pin. Mở hồ sơ để đọc dữ kiện.`);
+      if(event.type==='captured')minimalUI.notify(`BẢN TIN ĐÃ LƯU · ${mission.collected.length}/5`);
     } else if (event.type === 'overheat') {
       releaseCapture();
       if (state.powerOn) togglePower();
@@ -3012,9 +2993,9 @@ function renderMissionPanel(force=false) {
     const next = CHANNELS.find(c => !mission.collected.includes(c.id));
     writeNodeText(objective,`Mục tiêu: ${next.label}, vùng ${(next.freq-.1).toFixed(1)}–${(next.freq+.1).toFixed(1)} MHz. Anten khoảng ${next.bearing}°. Thu các trạm theo thứ tự bất kỳ.`);
   }
-  const nextTarget=CHANNELS.find(c=>!mission.collected.includes(c.id));
-  writeText('mobile-objective-label',mission.unlocked?'CHRONOS · ANTEN 80°':mission.collected.length===5?'ĐỦ 5 BẢN TIN · MỞ KHÓA SỐ':`${nextTarget.label} · ${(nextTarget.freq-.1).toFixed(1)}–${(nextTarget.freq+.1).toFixed(1)} MHz · ${nextTarget.bearing}°`);
+
   const reception=evaluateReception(mission,readRadioInput());
+  minimalUI.render({mission,reception,storm,holding:holdingCapture,frequency:state.frequency,signal:state.signalStrength,tuning:activeDragType==='tuning'||now-state.lastTuneTimestamp<2000,nearby:getNearestStationInfo(state.frequency).distance<.14});
   const channel=reception.targetStation;
   const duration=reception.captureDuration || 1;
   const pct=Math.min(100,Math.round(mission.progress/duration*100));
@@ -3097,21 +3078,15 @@ function releaseAllInput() { releaseCapture(); endKnobDrag(); }
 captureButton.addEventListener('lostpointercapture', releaseCapture);
 window.addEventListener('pointerup',releaseCapture);
 window.addEventListener('pointercancel',releaseCapture);
-document.getElementById('btn-scan').addEventListener('click',runScan);
-document.getElementById('btn-coolant').addEventListener('click',coolMachine);
+document.getElementById('btn-scan').addEventListener('click',()=>{overlays.close('operations');runScan();});
+document.getElementById('btn-coolant').addEventListener('click',()=>{overlays.close('operations');coolMachine();});
 document.getElementById('btn-pause').addEventListener('click',pauseMission);
 document.getElementById('btn-resume').addEventListener('click',resumeMission);
 document.getElementById('btn-new-shift').addEventListener('click',resetAllProgress);
 document.getElementById('antenna').addEventListener('input',e=>{ mission.antenna=Number(e.target.value); });
 document.getElementById('antenna').addEventListener('change',saveProgress);
 
-setupMobileLayout({
-  releaseCapture: releaseAllInput,
-  pause: pauseMission,
-  openJournal: openJournalDrawer,
-  openSettings: () => document.getElementById('btn-sound').click(),
-  openHelp: () => document.getElementById('btn-help').click()
-});
+const roomLayout=setupMobileLayout({releaseCapture:releaseAllInput});
 
 const definition = (id, initialFocus) => ({ element:document.getElementById(id), initialFocus,
   show(){this.element.hidden=false;this.element.classList.remove('hidden','opacity-0','pointer-events-none');this.element.classList.add('flex');},
@@ -3119,9 +3094,25 @@ const definition = (id, initialFocus) => ({ element:document.getElementById(id),
 const journalDefinition = { element:journalDrawer, backdrop:journalBackdrop, initialFocus:'#btn-close-journal',
   show(){ journalDrawer.hidden=false; journalBackdrop.classList.remove('hidden','opacity-0'); journalDrawer.classList.remove('translate-y-full','sm:translate-x-full'); },
   hide(){ journalDrawer.hidden=true; journalBackdrop.classList.add('hidden','opacity-0'); journalDrawer.classList.add('translate-y-full','sm:translate-x-full'); } };
+const operationsDefinition=definition('operations-drawer','#btn-close-operations');
+const showOperations=operationsDefinition.show.bind(operationsDefinition);
+const hideOperations=operationsDefinition.hide.bind(operationsDefinition);
+operationsDefinition.show=function(){
+  showOperations();roomLayout.refreshControls();
+  this.element.querySelector('.operations-body').scrollTop=0;
+  document.getElementById('btn-operations').setAttribute('aria-expanded','true');
+};
+operationsDefinition.hide=function(){
+  hideOperations();roomLayout.refreshControls();
+  document.getElementById('btn-operations').setAttribute('aria-expanded','false');
+};
 overlays=createOverlayManager({intro:definition('intro-overlay'),journal:journalDefinition,settings:definition('settings-modal','#btn-close-settings'),
-  help:definition('help-modal','#btn-close-help'),victory:definition('victory-modal','#btn-continue-freeplay'),mission:definition('mission-modal')},
+  operations:operationsDefinition,help:definition('help-modal','#btn-close-help'),victory:definition('victory-modal','#btn-continue-freeplay'),mission:definition('mission-modal')},
   ()=>{ releaseAllInput();updateMission();audio.updateAudioState();renderMissionPanel(true); });
+document.getElementById('btn-operations').addEventListener('click',()=>overlays.open('operations'));
+document.getElementById('btn-close-operations').addEventListener('click',()=>overlays.close('operations'));
+document.getElementById('btn-fine').addEventListener('click',()=>{overlays.open('operations');document.getElementById('hud-freq-slider').focus();});
+document.getElementById('btn-mobile-journal').addEventListener('click',()=>openJournalDrawer());
 setupInputManager({overlays,
   escape(){ const action=escapeAction(overlays.stack(),mission.status);
     if(action.type==='close') overlays.close(action.id);

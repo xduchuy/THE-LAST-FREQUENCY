@@ -1,64 +1,35 @@
-// Reuse the actual radio controls: resizing never creates a second game state.
+// Relocate live nodes, never clone controls or register a second input pipeline.
 export const MOBILE_QUERY = '(max-width: 900px), (max-width: 1023px) and (max-height: 540px)';
-
-export function setupMobileLayout({ releaseCapture, pause, openJournal, openSettings, openHelp }) {
-  const media = window.matchMedia(MOBILE_QUERY);
-  const shell = document.getElementById('mobile-console');
-  const slots = [];
-  const byId = id => document.getElementById(id);
-  const place = (node, target) => {
-    const marker = document.createComment('desktop control position');
-    node.before(marker);
-    slots.push({ node, marker, target });
-  };
-  const mission = byId('mission-panel');
-  place(byId('receiver-hud'), byId('mobile-receiver'));
-  place(mission, byId('mobile-mission-content'));
-  place(byId('canvas-container'), byId('radio-stage'));
-  place(mission.querySelector('.shift-clock'),byId('mobile-receiver'));
-  place(mission.querySelector('.shift-resources'),byId('mobile-receiver'));
-  place(byId('station-chips'), mission);
-  for (const node of [mission.querySelector('.antenna-label'), byId('antenna'), mission.querySelector('.antenna-scale')]) {
-    place(node, byId('mobile-antenna'));
+export function setupMobileLayout({ releaseCapture }) {
+  const byId=id=>document.getElementById(id), media=matchMedia(MOBILE_QUERY);
+  const canvas=byId('canvas-container'), footer=byId('room-footer'), status=byId('essential-status');
+  const aux=byId('aux-controls'), fallback=byId('radio-fallback');
+  function place(node,parent){if(node.parentElement!==parent)parent.append(node);}
+  function controls(){
+    const focused=document.activeElement;
+    const ready=document.body.classList.contains('webgl-ready');
+    place(aux,ready || !byId('operations-drawer').hidden ? byId('operations-controls') : media.matches?byId('radio-stage'):byId('desktop-radio-stage'));
+    if(focused?.isConnected && focused.getClientRects().length)focused.focus({preventScroll:true});
   }
-  place(byId('radio-controls'), byId('mobile-tuning'));
-  for (const node of [mission.querySelector('.record-readout'), mission.querySelector('.capture-track')]) {
-    place(node, byId('mobile-recording'));
+  function layout(){
+    releaseCapture();const focused=document.activeElement;
+    byId('mobile-console').hidden=!media.matches;
+    document.body.classList.toggle('mobile-layout',media.matches);
+    place(status,byId(media.matches?'mobile-receiver':'room-header'));
+    const stage=byId(media.matches?'radio-stage':'desktop-radio-stage');
+    place(canvas,stage);place(fallback,stage);
+    place(footer,byId(media.matches?'mobile-dock':'game-hud'));
+    byId('btn-operations').textContent=media.matches?'MENU':'CÔNG CỤ';
+    controls();
+    if(focused?.isConnected && focused.getClientRects().length)focused.focus({preventScroll:true});
   }
-  place(byId('btn-hud-power'), byId('mobile-record-buttons'));
-  place(byId('btn-capture'), byId('mobile-record-buttons'));
-
-  function updateLayout() {
-    releaseCapture();
-    const focused = document.activeElement;
-    shell.hidden = !media.matches;
-    document.body.classList.toggle('mobile-layout', media.matches);
-    byId('mobile-mission-details').open=false;
-    if (media.matches) {
-      for (const { node, target } of slots) target.append(node);
-    } else {
-      // Restore containers before their children, preserving the desktop order.
-      for (const { node, marker } of slots) marker.after(node);
-    }
-    if (focused instanceof HTMLElement && focused !== document.body) focused.focus({ preventScroll: true });
-  }
-  function updateViewport() {
-    const viewport = window.visualViewport;
-    document.documentElement.style.setProperty('--viewport-height', `${viewport?.height ?? innerHeight}px`);
-    document.documentElement.style.setProperty('--viewport-top', `${viewport?.offsetTop ?? 0}px`);
-  }
-  media.addEventListener('change', updateLayout);
-  window.addEventListener('resize', () => { releaseCapture(); updateViewport(); });
-  window.visualViewport?.addEventListener('resize', updateViewport);
-  window.visualViewport?.addEventListener('scroll', updateViewport);
-  updateViewport();
-  updateLayout();
-  byId('btn-mobile-receiver').addEventListener('click', () => {
-    byId('mobile-mission-details').open=false;
-  });
-  byId('btn-mobile-journal').addEventListener('click', () => openJournal('tab-clues'));
-  byId('btn-mobile-workbench').addEventListener('click', () => openJournal('tab-workbench'));
-  byId('btn-mobile-settings').addEventListener('click', openSettings);
-  byId('btn-mobile-help').addEventListener('click', openHelp);
-  byId('btn-mobile-pause').addEventListener('click', pause);
+  function viewport(){const v=window.visualViewport;document.documentElement.style.setProperty('--viewport-height',`${v?.height??innerHeight}px`);document.documentElement.style.setProperty('--viewport-top',`${v?.offsetTop??0}px`);}
+  media.addEventListener('change',layout);
+  window.addEventListener('resize',()=>{releaseCapture();viewport();});
+  window.visualViewport?.addEventListener('resize',viewport);
+  window.visualViewport?.addEventListener('scroll',viewport);
+  new MutationObserver(controls).observe(document.body,{attributes:true,attributeFilter:['class']});
+  new MutationObserver(controls).observe(byId('operations-drawer'),{attributes:true,attributeFilter:['hidden']});
+  viewport();layout();
+  return {refreshControls:controls};
 }

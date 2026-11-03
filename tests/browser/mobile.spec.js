@@ -1,3 +1,4 @@
+import {operations,useControl,setControl} from './ui.js';
 import { test, expect } from '@playwright/test';
 test.use({ isMobile: true, hasTouch: true });
 async function start(page, viewport = { width: 390, height: 844 }) {
@@ -30,19 +31,18 @@ for (const [width, height] of [[320,568],[360,640],[390,844],[414,896],[667,375]
     await start(page,{width,height});
     await expect(page.locator('#mobile-console')).toBeVisible();
     for (const selector of ['#antenna','#hud-freq-slider']) await controlIsReachable(page,selector);
-    for (const selector of ['#btn-capture','#btn-hud-power','#btn-mobile-journal','#btn-mobile-pause','.btn-step[data-step="0.01"]']) await controlIsReachable(page,selector,44);
-    const boxes=await page.evaluate(()=>['mobile-receiver','mobile-workspace','mobile-dock','mobile-nav'].map(id=>{
+    for (const selector of ['#btn-capture','#btn-hud-power','#btn-operations','#btn-pause','.btn-step[data-step="0.01"]']) await controlIsReachable(page,selector,44);
+    const boxes=await page.evaluate(()=>['mobile-receiver','mobile-workspace','mobile-dock'].map(id=>{
       const r=document.getElementById(id).getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};
     }));
-    const [receiver,workspace,dock,nav]=boxes;
-    if(width>height) { expect(workspace.right).toBeLessThanOrEqual(receiver.x+1); expect(receiver.bottom).toBeLessThanOrEqual(dock.y+1); }
-    else { expect(receiver.bottom).toBeLessThanOrEqual(workspace.y+1); expect(workspace.bottom).toBeLessThanOrEqual(dock.y+1); }
-    expect(dock.bottom).toBeLessThanOrEqual(nav.y+1);
+    const [receiver,workspace,dock]=boxes;
+    expect(receiver.bottom).toBeLessThanOrEqual(workspace.y+1);
+    expect(workspace.bottom).toBeLessThanOrEqual(dock.y+1);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await expect(page.locator('#radio-fallback')).toBeVisible();
-    await page.locator('#btn-mobile-journal').tap();await controlIsReachable(page,'#btn-close-journal',44);await page.keyboard.press('Escape');
-    await page.locator('#btn-mobile-settings').tap();await controlIsReachable(page,'#btn-close-settings',44);await page.keyboard.press('Escape');
-    await page.locator('#btn-mobile-pause').tap();await expect(page.locator('#mission-modal')).toBeVisible();await page.locator('#btn-resume').tap();
+    await useControl(page,'#btn-mobile-journal','tap');await controlIsReachable(page,'#btn-close-journal',44);await page.keyboard.press('Escape');
+    await useControl(page,'#btn-sound','tap');await controlIsReachable(page,'#btn-close-settings',44);await page.keyboard.press('Escape');
+    await page.locator('#btn-pause').tap();await expect(page.locator('#mission-modal')).toBeVisible();await page.locator('#btn-resume').tap();
     await page.screenshot({path:test.info().outputPath('console.png')});
     expect(errors).toEqual([]);
   });
@@ -69,7 +69,7 @@ test('real touch hold records, touch cancel releases, and scrolling leaves contr
 });
 test('phone journal, code wheels, notes and settings remain usable in a short viewport',async({page})=>{
   await start(page,{width:320,height:568});
-  await page.locator('#btn-mobile-journal').tap();
+  await useControl(page,'#btn-mobile-journal','tap');
   await controlIsReachable(page,'#btn-close-journal',44);
   await page.locator('[data-tab="tab-decoder"]').tap();
   const digit=page.locator('.digit-btn[data-digit="0"][data-dir="1"]');
@@ -78,16 +78,16 @@ test('phone journal, code wheels, notes and settings remain usable in a short vi
   expect(await digit.evaluate(el=>el.getBoundingClientRect().height)).toBeGreaterThanOrEqual(44);
   await controlIsReachable(page,'#btn-close-journal',44);
   await page.locator('[data-tab="tab-workbench"]').tap();
-  await page.locator('#operator-note').fill('Ghi chú ca trực trên điện thoại.');
+  await page.locator('[data-tab="tab-notes"]').click();await page.locator('#operator-note').fill('Ghi chú ca trực trên điện thoại.');
   await page.setViewportSize({width:320,height:380});
   await expect.poll(()=>page.locator('#journal-drawer').evaluate(el=>el.getBoundingClientRect().bottom)).toBeLessThanOrEqual(381);
   await controlIsReachable(page,'#btn-close-journal',44);
   await page.locator('#btn-close-journal').tap();
   await page.setViewportSize({width:320,height:568});
-  await page.locator('#btn-mobile-settings').tap();
+  await useControl(page,'#btn-sound','tap');
   await controlIsReachable(page,'#btn-close-settings',44);
   await page.locator('#btn-close-settings').tap();
-  await page.locator('#btn-mobile-help').tap();
+  await useControl(page,'#btn-help','tap');
   await controlIsReachable(page,'#btn-close-help',44);
 });
 test('rotation and desktop resize preserve one set of controls and saved state',async({page})=>{
@@ -101,7 +101,7 @@ test('rotation and desktop resize preserve one set of controls and saved state',
   await expect(page.locator('#mobile-console')).toBeHidden();
   await expect(page.locator('#equipment-header')).toBeVisible();
   await expect(page.locator('#btn-hud-power')).toHaveCount(1);
-  await expect(page.locator('#mission-panel #antenna')).toHaveCount(1);
+  await expect(page.locator('#desktop-radio-stage #antenna')).toHaveCount(1);
   await expect(page.locator('#radio-controls #btn-hud-power')).toHaveCount(1);
   await expect(page.locator('#hud-freq')).toHaveText('3.10');
   await page.setViewportSize({width:390,height:844});

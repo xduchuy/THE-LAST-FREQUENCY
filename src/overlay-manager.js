@@ -1,6 +1,6 @@
 export function escapeAction(stack, status) {
   const top = stack.at(-1);
-  if (top === 'journal' || top === 'settings' || top === 'help') return { type: 'close', id: top };
+  if (top === 'operations' || top === 'journal' || top === 'settings' || top === 'help') return { type: 'close', id: top };
   if (top === 'intro' || top === 'victory' || status === 'won' || status === 'lost') return { type: 'consume' };
   if (top === 'mission' || !top) return { type: status === 'playing' ? 'pause' : status === 'paused' ? 'resume' : 'consume' };
   return { type: 'consume' };

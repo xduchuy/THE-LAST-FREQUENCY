@@ -1,14 +1,15 @@
+import {operations,useControl,setControl} from './ui.js';
 import {test,expect} from '@playwright/test';
 const diagnostics=page=>page.evaluate(()=>window.__radioDiagnostics());
 async function start(page){await page.goto('/');await page.locator('#btn-start-session').click();await expect(page.locator('#intro-overlay')).toBeHidden();}
 for(const [button,id] of [['btn-journal','journal'],['btn-sound','settings'],['btn-help','help']]){
  test(`Escape closes ${id} without pausing and restores focus`,async({page})=>{
-  await start(page);await page.locator(`#${button}`).click();
+  await start(page);await useControl(page,`#${button}`);
   await expect.poll(async()=>(await diagnostics(page)).overlay).toBe(id);
   expect(await page.locator('#btn-hud-power').evaluate(el=>Boolean(el.closest('[inert]')))).toBe(true);
   await page.keyboard.press('Escape');await expect.poll(async()=>(await diagnostics(page)).overlay).toBeUndefined();
   expect((await diagnostics(page)).missionStatus).toBe('playing');await expect(page.locator('#mission-modal')).toBeHidden();
-  await expect(page.locator(`#${button}`)).toBeFocused();
+  await expect(page.locator(button==='btn-journal'?'#btn-journal':'#btn-operations')).toBeFocused();
  });
 }
 test('Escape pauses/resumes once, repeated keydown cannot toggle twice, and modal traps Tab',async({page})=>{
@@ -19,8 +20,8 @@ test('Escape pauses/resumes once, repeated keydown cannot toggle twice, and moda
  await expect(page.locator('#mission-modal')).toBeHidden();
 });
 test('notes, modifiers, and modal hotkeys never tune, power or capture',async({page})=>{
- await start(page);const initial=await diagnostics(page);await page.locator('#btn-workbench').click();
- await page.locator('#operator-note').fill('Note');await page.keyboard.type(' p r c j k ');await page.keyboard.press('Space');
+ await start(page);const initial=await diagnostics(page);await useControl(page,'#btn-workbench','click');
+ await page.locator('[data-tab="tab-notes"]').click();await page.locator('#operator-note').fill('Note');await page.keyboard.type(' p r c j k ');await page.keyboard.press('Space');
  const after=await diagnostics(page);expect(after.holdingCapture).toBe(false);expect(after.powerOn).toBe(initial.powerOn);expect(after.targetFrequency).toBe(initial.targetFrequency);
  await expect(page.locator('#operator-note')).toHaveValue('Note p r c j k  ');
  await page.keyboard.press('Escape');await page.locator('body').click({position:{x:3,y:3}});
@@ -62,8 +63,8 @@ test('short-lived audio oscillators disconnect after repeated power interactions
    osc.disconnect=function(...args){window.__audioNodes.disconnected++;return disconnect.apply(this,args);};return osc;
   };
  });
- await start(page);for(let i=0;i<4;i++)await page.locator('#btn-hud-power').click();
+ await start(page);for(let i=0;i<4;i++)await useControl(page,'#btn-hud-power','click');
  await expect.poll(()=>page.evaluate(()=>window.__audioNodes.created-window.__audioNodes.disconnected)).toBe(3); // Three persistent radio oscillators.
- const before=await diagnostics(page);await page.locator('#btn-journal').click();await expect.poll(async()=>(await diagnostics(page)).audioGain).toBeLessThan(.002);
+ const before=await diagnostics(page);await useControl(page,'#btn-journal','click');await expect.poll(async()=>(await diagnostics(page)).audioGain).toBeLessThan(.002);
  await page.keyboard.press('Escape');expect((await diagnostics(page)).audioInitialized).toBe(before.audioInitialized);
 });

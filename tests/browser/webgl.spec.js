@@ -1,3 +1,4 @@
+import {operations,useControl,setControl} from './ui.js';
 import { browserLaunch } from '../browser-launch.js';
 import { test, expect } from '@playwright/test';
 async function start(page) { await page.goto('/'); await page.locator('#btn-start-session').click(); await expect(page.locator('#intro-overlay')).toBeHidden(); }
@@ -21,7 +22,7 @@ test('touch devices render the mobile console with the low-cost graphics default
  await expect(page.locator('#btn-quality-toggle')).toContainText('TIẾT KIỆM');
  const dimensions=await page.locator('#canvas-container canvas').evaluate(el=>({width:el.width,cssWidth:el.getBoundingClientRect().width}));
  expect(dimensions.width/dimensions.cssWidth).toBeLessThanOrEqual(1.16);
- await page.locator('#btn-mobile-settings').tap();await page.locator('#btn-quality-toggle').tap();
+ await useControl(page,'#btn-sound','tap');await page.locator('#btn-quality-toggle').tap();
  expect((await page.evaluate(()=>window.__radioDiagnostics())).shadows).toBe(true);
  await page.locator('#btn-quality-toggle').tap();expect((await page.evaluate(()=>window.__radioDiagnostics())).shadows).toBe(false);
  const pixels=await page.locator('#canvas-container canvas').evaluate(el=>el.width*el.height);expect(pixels).toBeLessThanOrEqual(360000);

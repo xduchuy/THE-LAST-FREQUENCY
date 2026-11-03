@@ -1,3 +1,6 @@
+import {operations,useControl,setControl} from './ui.js';
+import {readFileSync} from 'node:fs';
+const baseline=JSON.parse(readFileSync(new URL('../../docs/v4-visuals/before-metrics.json',import.meta.url)));
 import {test,expect} from '@playwright/test';import {browserLaunch} from '../browser-launch.js';
 test.use({launchOptions:browserLaunch(true)});
 const diag=page=>page.evaluate(()=>window.__radioDiagnostics());
@@ -27,6 +30,13 @@ for(const [width,height] of [[320,568],[360,640],[390,844],[414,896],[667,375],[
   expect(buffer.width*buffer.height).toBeLessThanOrEqual(360000);
   await test.info().attach('render-buffer.json',{body:JSON.stringify(buffer),contentType:'application/json'});
   const before=await diag(page);const rect=await page.locator('#canvas-container canvas').boundingBox();
+  await expect(page.locator('#operations-drawer')).toBeHidden();await expect(page.locator('#receiver-hud')).toBeHidden();await expect(page.locator('#station-chips')).toBeHidden();await expect(page.locator('#radio-controls')).toBeHidden();
+  await expect(page.locator('#btn-capture')).toBeInViewport();await expect(page.locator('#btn-operations')).toBeInViewport();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  for(const p of Object.values(before.controls))expect(await page.evaluate(p=>document.elementFromPoint(p.x,p.y)?.tagName,p)).toBe('CANVAS');
+  const old=baseline.find(b=>b.width===width&&b.height===height);
+  if(old){expect(rect.width*rect.height).toBeGreaterThan(old.canvas.width*old.canvas.height);expect(before.controls.tuning.x-before.controls.power.x).toBeGreaterThan((old.controls.tuning.x-old.controls.power.x)*1.02);}
+  await page.screenshot({path:test.info().outputPath('quiet-room-default.png')});
   for(const p of Object.values(before.controls)){expect(p.x).toBeGreaterThan(rect.x);expect(p.x).toBeLessThan(rect.x+rect.width);expect(p.y).toBeGreaterThan(rect.y);expect(p.y).toBeLessThan(rect.y+rect.height);}
   await drag(page,'tuning',touch,30);await expect.poll(async()=>(await diag(page)).targetFrequency).toBeGreaterThan(before.targetFrequency);
   const tuned=await diag(page);await expect(page.locator('#hud-freq-slider')).toHaveValue(String(Math.round(tuned.targetFrequency*100)));
@@ -34,8 +44,8 @@ for(const [width,height] of [[320,568],[360,640],[390,844],[414,896],[667,375],[
   const p=quieter.controls.power;if(touch)await page.touchscreen.tap(p.x,p.y);else await page.mouse.click(p.x,p.y);
   await expect.poll(async()=>(await diag(page)).powerOn).toBe(false);await expect(page.locator('#btn-hud-power')).toHaveAttribute('aria-pressed','false');
   await expect.poll(async()=>(await diag(page)).audioGain).toBeLessThan(.002);
-  await page.locator('#btn-hud-power').click();await expect.poll(async()=>(await diag(page)).powerRotation).toBeLessThan(0);
-  await page.locator('#hud-freq-slider').fill('350');await expect.poll(async()=>Math.abs((await diag(page)).knobRotation+Math.PI/3)).toBeLessThan(.03);
+  await useControl(page,'#btn-hud-power','click');await expect.poll(async()=>(await diag(page)).powerRotation).toBeLessThan(0);
+  await setControl(page,'#hud-freq-slider','350');await expect.poll(async()=>Math.abs((await diag(page)).knobRotation+Math.PI/3)).toBeLessThan(.03);
   await page.mouse.move(0,0);await page.screenshot({path:test.info().outputPath('radio.png')});expect(errors).toEqual([]);
   await context.close();
  });
@@ -52,13 +62,13 @@ test('overlay, blur and pointercancel release 3D gestures; resize and overlays d
  await ready(page);const initial=await diag(page);const initialIntervals=await page.evaluate(()=>window.__perf.intervals.size);const p=initial.controls.tuning;
  await page.mouse.move(p.x,p.y);await page.mouse.down();await expect.poll(async()=>(await diag(page)).drag).toBe('tuning');
  await page.evaluate(()=>window.dispatchEvent(new PointerEvent('pointercancel',{pointerId:1})));await page.mouse.up();await expect.poll(async()=>(await diag(page)).drag).toBeNull();
- for(let i=0;i<3;i++){await page.locator('#btn-mobile-journal').click();await page.locator('#journal-drawer').focus();await page.keyboard.press('Space');expect((await diag(page)).holdingCapture).toBe(false);await page.keyboard.press('Escape');}
+ for(let i=0;i<3;i++){await useControl(page,'#btn-mobile-journal','click');await page.locator('#journal-drawer').focus();await page.keyboard.press('Space');expect((await diag(page)).holdingCapture).toBe(false);await page.keyboard.press('Escape');}
  await page.setViewportSize({width:844,height:390});await page.setViewportSize({width:390,height:844});
  await expect.poll(async()=>(await diag(page)).renderFrames).toBeGreaterThan(initial.renderFrames);
  const stats=await page.evaluate(()=>({audio:window.__perf.audio,maxPending:window.__perf.maxPending,intervals:window.__perf.intervals.size,writes:window.__perf.writes}));
  expect(stats.audio).toBe(1);expect(stats.maxPending).toBe(1);expect(stats.intervals).toBe(initialIntervals);expect(stats.writes).toBeLessThan(25);
  expect((await diag(page)).textures).toBeLessThanOrEqual(initial.textures+1);await expect(page.locator('#canvas-container canvas')).toHaveCount(1);
- await page.locator('#btn-hud-power').click();await expect.poll(async()=>(await diag(page)).powerOn).toBe(false);
+ await useControl(page,'#btn-hud-power','click');await expect.poll(async()=>(await diag(page)).powerOn).toBe(false);
  const frame=(await diag(page)).renderFrames;await expect.poll(async()=>(await diag(page)).renderFrames).toBeGreaterThan(frame+2);
  const version=(await diag(page)).scopeVersion;const next=(await diag(page)).renderFrames;
  await expect.poll(async()=>(await diag(page)).renderFrames).toBeGreaterThan(next+3);

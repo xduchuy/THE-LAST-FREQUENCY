@@ -1,3 +1,4 @@
+import {operations,useControl,setControl} from './ui.js';
 import { test, expect } from '@playwright/test';
 const SAVE='the_last_frequency_save_v3';
 async function start(page, webgl=false) {
@@ -22,7 +23,7 @@ async function hold(page,seconds=5) {
 test('power-on is not auto-capture, scanner costs pin, manual capture persists and pause freezes time',async({page})=>{
  await start(page); await tune(page,3.2,35);
  await page.waitForTimeout(5000); await expect(page.locator('#progress-counter')).toHaveText('0/5 TÍN HIỆU');
- await page.locator('#btn-scan').click(); await expect(page.locator('#mission-feedback')).toContainText('QUÉT:');
+ await useControl(page,'#btn-scan','click'); await expect(page.locator('#mission-feedback')).toContainText('QUÉT:');
  await tune(page,3.2,35); await hold(page);
  await expect(page.locator('#progress-counter')).toHaveText('1/5 TÍN HIỆU');
  await page.locator('#btn-pause').click(); const time=await page.locator('#mission-time').textContent();
@@ -34,17 +35,17 @@ test('all five live captures, mechanical code and final SOS reach victory',async
  test.setTimeout(120000);
  await start(page);
  for(const [freq,antenna] of [[3.2,35],[4.75,110],[6.18,65],[8.9,145],[11.4,95]]) {
-  if (Number((await page.locator('#heat-value').textContent()).replace(/[^0-9]/g,'')) > 65) await page.locator('#btn-coolant').click();
+  if (Number((await page.locator('#heat-value').textContent()).replace(/[^0-9]/g,'')) > 65) await useControl(page,'#btn-coolant','click');
   await tune(page,freq,antenna); await hold(page,5.3);
  }
  await expect(page.locator('#progress-counter')).toHaveText('5/5 TÍN HIỆU');
- await page.locator('#btn-journal').click();
+ await useControl(page,'#btn-journal','click');
  await page.locator('[data-tab="tab-decoder"]').click();
  for(const [index,count] of [7,4,2,9].entries()) for(let i=0;i<count;i++) await page.locator(`.digit-btn[data-digit="${index}"][data-dir="1"]`).click();
  await page.locator('#btn-verify-code').click();
  await expect(page.locator('#decoder-lock-badge')).toContainText('ĐÃ MỞ');
  await page.locator('#btn-close-journal').click();
- await tune(page,9.65,80); await page.locator('#btn-coolant').click(); await hold(page,8.7);
+ await tune(page,9.65,80); await useControl(page,'#btn-coolant','click'); await hold(page,8.7);
  await expect(page.locator('#victory-modal')).toBeVisible(); await expect(page.locator('#victory-score')).toContainText('Bản tin: 5/5');
  await page.locator('#btn-replay-reset').click(); await expect(page.locator('#intro-overlay')).toBeVisible();
  await expect(page.locator('#progress-counter')).toHaveText('0/5 TÍN HIỆU');

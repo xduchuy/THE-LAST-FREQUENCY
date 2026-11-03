@@ -1,3 +1,4 @@
+import {operations,useControl,setControl} from './ui.js';
 import {test,expect} from '@playwright/test';
 const old={operatorNote:'Ghi chú từ năm 1974',discoveredIds:['borealis','echo7'],bandMemory:[[12,88]],volume:.3,frequency:6.18,muted:true,reducedMotion:true,highQuality:false,gameCompleted:true,codeUnlocked:true};
 test('legacy choice imports an archive without granting a Night Shift unlock; no repeat prompt',async({page})=>{
@@ -6,7 +7,7 @@ test('legacy choice imports an archive without granting a Night Shift unlock; no
  await expect(page.locator('#legacy-recovery')).toBeHidden();
  await expect(page.locator('#btn-reduced-motion')).toContainText('BẬT');await expect(page.locator('#btn-quality-toggle')).toContainText('TIẾT KIỆM');await expect(page.locator('#slider-volume')).toHaveValue('30');
  await expect(page.locator('#progress-counter')).toHaveText('0/5 TÍN HIỆU');
- await page.locator('#btn-start-session').click();await page.locator('#btn-journal').click();
+ await page.locator('#btn-start-session').click();await useControl(page,'#btn-journal','click');
  await expect(page.locator('#legacy-archive')).toBeVisible();await expect(page.locator('#archive-notes')).toHaveText(old.operatorNote);
  await expect(page.locator('#archive-stations')).toContainText('BOREALIS');await expect(page.locator('#decoder-lock-badge')).toContainText('CHƯA');
  await page.reload();await expect(page.locator('#legacy-recovery')).toBeHidden();

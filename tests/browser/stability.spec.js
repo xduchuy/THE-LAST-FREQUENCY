@@ -1,3 +1,4 @@
+import {operations,useControl,setControl} from './ui.js';
 import {test,expect} from '@playwright/test';
 const SAVE='the_last_frequency_save_v3';
 const diag=page=>page.evaluate(()=>window.__radioDiagnostics());
@@ -7,7 +8,7 @@ for(const [battery,elapsed,reason] of [[4,0,'battery'],[100,710,'timeout'],[4,71
   await page.addInitScript(({SAVE,battery,elapsed})=>{
    if(!localStorage.getItem(SAVE))localStorage.setItem(SAVE,JSON.stringify({mission:{version:3,difficulty:'operator',status:'paused',battery,elapsed,collected:['borealis','echo7','orpheus','k19','helios4']}}));
   },{SAVE,battery,elapsed});
-  await start(page);await page.locator('#btn-journal').click();await page.locator('[data-tab="tab-decoder"]').click();
+  await start(page);await useControl(page,'#btn-journal','click');await page.locator('[data-tab="tab-decoder"]').click();
   await page.locator('#btn-verify-code').click();
   await expect(page.locator('#journal-drawer')).toBeHidden();await expect(page.locator('#mission-modal-title')).toHaveText('Tín hiệu đã tắt.');
   const lost=await diag(page);expect(lost.overlay).toBe('mission');expect(lost.missionStatus).toBe('lost');expect(lost.reason).toBe(reason);expect(lost.holdingCapture).toBe(false);expect(lost.powerOn).toBe(false);
@@ -46,7 +47,7 @@ test('an actual blocked main thread counts stall time, gives no recording credit
  await start(page);await page.locator('#hud-freq-slider').fill('320');await page.locator('#antenna').fill('35');await expect(page.locator('#capture-status')).toContainText('TÍN HIỆU TỐT');
  await page.locator('#btn-capture').focus();await page.keyboard.down('Space');await page.waitForTimeout(150);const before=await diag(page);
  const observedAt=await page.evaluate(()=>{const until=performance.now()+2300;while(performance.now()<until){/* deliberate real stall */}return performance.now();});
- await expect(page.locator('#mission-feedback')).toContainText('Gián đoạn');const sample=await page.evaluate(()=>({now:performance.now(),d:window.__radioDiagnostics()})),after=sample.d;
+ await expect(page.locator('#mission-feedback')).toContainText('Liên lạc gián đoạn');const sample=await page.evaluate(()=>({now:performance.now(),d:window.__radioDiagnostics()})),after=sample.d;
  expect(after.missionElapsed-before.missionElapsed).toBeGreaterThanOrEqual(2.3);
  // New progress is bounded by time AFTER observations resumed, never the blocked interval.
  expect(after.progress).toBeLessThanOrEqual((sample.now-observedAt)/1000+.05);expect(after.holdingCapture).toBe(true);expect(after.missionStatus).toBe('playing');
@@ -57,8 +58,8 @@ test('an actual blocked main thread counts stall time, gives no recording credit
 test('HUD shares warmup, flywheel, ready and stored-record rules; telemetry stays at 10 Hz',async({page})=>{
  await start(page);await page.locator('#hud-freq-slider').fill('320');await page.locator('#antenna').fill('35');
  await expect(page.locator('#capture-status')).toContainText('TÍN HIỆU TỐT');expect((await diag(page)).reception.canCapture).toBe(true);
- await page.locator('#btn-hud-power').click();await expect(page.locator('#capture-status')).toContainText('BẬT PWR');expect((await diag(page)).reception.canCapture).toBe(false);
- await page.waitForTimeout(1800);await page.locator('#btn-hud-power').click();await expect(page.locator('#capture-status')).toContainText('LÀM NÓNG');
+ await useControl(page,'#btn-hud-power','click');await expect(page.locator('#capture-status')).toContainText('BẬT PWR');expect((await diag(page)).reception.canCapture).toBe(false);
+ await page.waitForTimeout(1800);await useControl(page,'#btn-hud-power','click');await expect(page.locator('#capture-status')).toContainText('LÀM NÓNG');
  await expect(page.locator('#capture-status')).toContainText('TÍN HIỆU TỐT');
  await page.locator('#hud-freq-slider').fill('350');await expect(page.locator('#capture-status')).toContainText('ĐANG TRƯỢT');
  await page.locator('#hud-freq-slider').fill('320');await expect(page.locator('#capture-status')).toContainText('TÍN HIỆU TỐT');

@@ -17,5 +17,5 @@ export function frameRadio(box, aspect) {
     const offset=new THREE.Vector3(x,y,z).sub(center);
     distance=Math.max(distance,Math.abs(offset.dot(right))/tanH+offset.dot(direction),Math.abs(offset.dot(up))/tanV+offset.dot(direction));
   }
-  return { fov, center, position:center.clone().addScaledVector(direction,distance*1.13) };
+  return { fov, center, position:center.clone().addScaledVector(direction,distance*1.08) };
 }

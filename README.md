@@ -1,4 +1,4 @@
-# THE LAST FREQUENCY V3.2 — Stability & Fair Play
+# THE LAST FREQUENCY V4.0 — The Quiet Radio Room
 
 Game giải đố / sinh tồn vô tuyến, tiếng Việt. Năm 1974, một điện báo viên phải khôi phục mạng CHRONOS trước khi cửa sổ liên lạc đóng lại.
 
@@ -16,7 +16,7 @@ Mở địa chỉ do Vite hiển thị. `npm run build` tạo bản tĩnh trong 
 ## Gameplay
 
 1. Chọn Tân binh (18 phút), Điện báo viên (12 phút) hoặc Cựu binh (9 phút), nhận ca trực.
-2. Dò vùng tần số hiển thị trong nhiệm vụ. Căn anten để tăng S-Meter. Hướng dẫn nhiệm vụ luôn gợi ý vùng và hướng, không tự thu hộ người chơi.
+2. Mở **CÔNG CỤ / MENU → Sổ vận hành** để xem vùng tần số và hướng anten gợi ý. Căn anten để tăng S-Meter. Hướng dẫn nhiệm vụ luôn gợi ý vùng và hướng, không tự thu hộ người chơi.
 3. Giữ **THU BẢN TIN** / **Space** đến khi ghi đủ. Tần số ổn định và tín hiệu đủ mạnh mới có tiến độ. Mất sóng / buông nút làm tiến độ lùi. Bản tin đã lưu không thể dùng để farm điểm.
 4. Theo dõi pin và nhiệt. Thu một trạm mới hồi 7% pin. Tắt **PWR** để sạc chậm và hạ nhiệt, nhưng vẫn tốn thời gian. **C** dùng một trong 3 bình làm mát (−45°C). Quá nhiệt sẽ ngắt máy 8 giây và mất 8% pin.
 5. **R** quét một trạm chưa thu: tốn 3% pin, hồi 18 giây. Máy chỉ dò thô; vẫn phải tinh chỉnh và căn anten. Bão từ bắt đầu ở giây 60 mỗi chu kỳ 90 giây, kéo dài 18 giây, làm trôi tần số và tăng nhiệt.
@@ -25,11 +25,15 @@ Mở địa chỉ do Vite hiển thị. `npm run build` tạo bản tĩnh trong 
 
 **P** bật/tắt nguồn · **← / →** dò sóng · **Shift + ← / →** bước 0.01 MHz · **J** hồ sơ · **K** bản đồ sóng · **M** tắt tiếng · **Esc** tạm dừng / tiếp tục.
 
-Trên điện thoại, radio 3D nằm trong vùng tương tác riêng. Chạm POWER, kéo núm TUNING theo chiều ngang/dọc để dò, kéo VOLUME để chỉnh âm lượng. Các núm, đèn và thanh HTML dùng cùng state. Bảng lệnh ca trực dưới radio mở vùng sóng mục tiêu, scanner, làm mát và nhật ký; bấm MÁY THU để gấp lại. Anten, dò tinh và nút thu luôn ở thanh kim loại phía dưới. Xoay ngang đưa radio sang trái, telemetry và controls sang phải; bố cục chừa tai thỏ/thanh Home.
+**Radio là giao diện chính.** Trạng thái mặc định chỉ còn thời gian, pin, nhiệt, số bản tin và thanh Thu / Công cụ. Desktop có nút Hồ sơ; mobile dùng **MENU → HỒ SƠ** và **FINE** để mở ngay bộ dò tinh. Chạm POWER, kéo núm TUNING để dò, kéo VOLUME để chỉnh âm lượng; các điều khiển 3D và HTML dùng cùng state. Nhãn tần số/tín hiệu chỉ hiện trong khi dò và khoảng 2 giây sau thao tác.
 
-Thiết bị cảm ứng mặc định dùng chất lượng tiết kiệm, DPR giới hạn, ít mưa/bụi và không có bóng động. Chế độ Low giới hạn buffer radio ở 360.000 pixel trên canvas lớn; CSS, camera và tọa độ chạm giữ nguyên. Chuyển chất lượng cũng cập nhật bóng động đúng chế độ. Người chơi có thể chọn chất lượng cao trong Cài đặt. Nếu WebGL không khả dụng, thông báo HUD xuất hiện trong vùng radio và toàn bộ trò chơi vẫn điều khiển được bằng HTML.
+**Sổ vận hành** chứa Scanner, Làm mát, anten, thanh dò, nút bước tần số, nhiệm vụ, điểm/combo, các kênh đã khám phá và đồng hồ phụ. Scanner/Làm mát có ngay ở đầu menu; bấm sẽ đóng menu và thực hiện hành động. Mở menu dừng đồng hồ/tài nguyên, nhả thao tác đang giữ và chặn hotkey phía sau. Đóng menu trở lại radio. Các nút HTML vẫn hỗ trợ keyboard; khi WebGL lỗi, chúng tự chuyển ra vùng radio để chơi bằng fallback.
 
-Escape đóng Journal/Settings/Help trước, không mở Pause khi đóng tài liệu. Không có overlay: Escape tạm dừng/tiếp tục; thắng/thua giữ nguyên trạng thái terminal. Modal giữ focus, chặn thao tác phía sau và trả focus về nút mở khi đóng. Space không kích hoạt thu khi gõ ghi chú hoặc mở modal; nút Thu nhận Space khi được focus. Ctrl/Cmd/Alt và IME không bị hotkey game chiếm.
+Mobile dành vùng giữa cho radio, giữ Thu/Fine/Menu trong một hàng ở dưới, có safe-area và bố cục ngang riêng. Resize di chuyển đúng các DOM node đang dùng, không clone controls hoặc reset save. Hồ sơ dùng bốn tab **Bản tin / Giải mã / Bản đồ sóng / Ghi chú**; nội dung, xuất nhật ký và lưu ghi chú giữ nguyên.
+
+Thiết bị cảm ứng mặc định dùng chất lượng tiết kiệm, DPR giới hạn, ít mưa/bụi và không có bóng động. Chế độ Low giới hạn buffer radio ở 360.000 pixel trên canvas lớn; CSS, camera và tọa độ chạm giữ nguyên. Chuyển chất lượng cũng cập nhật bóng động đúng chế độ. Người chơi có thể chọn chất lượng cao trong Cài đặt. Nếu WebGL không khả dụng, bộ điều khiển dự phòng xuất hiện trong vùng radio và toàn bộ trò chơi vẫn điều khiển được bằng HTML.
+
+Escape đóng Sổ vận hành/Journal/Settings/Help trước, không mở Pause khi đóng tài liệu. Không có overlay: Escape tạm dừng/tiếp tục; thắng/thua giữ nguyên trạng thái terminal. Modal giữ focus, chặn thao tác phía sau và trả focus về nút mở khi đóng. Space không kích hoạt thu khi gõ ghi chú hoặc mở modal; nút Thu nhận Space khi được focus. Ctrl/Cmd/Alt và IME không bị hotkey game chiếm.
 
 Đồng hồ ca trực dùng `performance.now()`, độc lập với animation; tài nguyên chạy bước cố định 50 ms. 18/12/9 phút được giữ nguyên cả khi FPS thấp. Chỉ ghi nhận thu liên tục khi cả hai mẫu đầu/cuối đều hợp lệ và vẫn giữ đúng trạm. Khoảng treo trên 2 giây tính đủ thời gian, pin chờ, hạ nhiệt, bão và cooldown đến hết ca; không cấp tiến độ thu hoặc tính giữ nút trong khoảng không quan sát được, báo trên HUD. Nếu vẫn giữ đúng pointer/phím, chỉ những mẫu hợp lệ mới sau khi hết treo mới tiếp tục thu. Tab đang hiển thị tiếp tục tính giờ; stall không tự mở menu Pause. Catch-up có giới hạn theo thời lượng ca, không chạy vô hạn.
 
@@ -58,7 +62,9 @@ Bộ HUD/fallback chạy với WebGL bị tắt có chủ đích. Bộ `radio-3d
 
 `.github/workflows/ci.yml` chạy trên push/PR vào main hoặc manual: hai job độc lập Node 22 cho unit/build và E2E; riêng E2E pin `ubuntu-24.04` tương thích Playwright 1.56.1, cài Chromium cùng OS dependencies, quyền read-only, timeout, concurrency cancellation và artifact khi lỗi. Workflow không deploy. Có workflow trong repo không có nghĩa đã xác minh CI xanh trên GitHub.
 
-Báo cáo baseline, bằng chứng kiểm thử và giới hạn: [docs/V3.2-report.md](docs/V3.2-report.md) (bản trước: [V3.1](docs/V3.1-report.md)). Thay đổi phiên bản: [CHANGELOG.md](CHANGELOG.md).
+Báo cáo V4, ảnh trước/sau và kiểm thử: [docs/V4.0-report.md](docs/V4.0-report.md). Album ảnh chạy thật: [docs/v4-visuals](docs/v4-visuals/README.md).
+
+Báo cáo baseline V3.2: [docs/V3.2-report.md](docs/V3.2-report.md) (bản trước: [V3.1](docs/V3.1-report.md)). Thay đổi phiên bản: [CHANGELOG.md](CHANGELOG.md).
 
 
 ## Mã nguồn
@@ -78,3 +84,5 @@ Báo cáo baseline, bằng chứng kiểm thử và giới hạn: [docs/V3.2-rep
 Nâng cấp từ tệp `THE_LAST_FREQUENCY_V2.2_SIGNAL_WORKBENCH.html` do chủ dự án cung cấp. Âm thanh và phần lớn vật thể được dựng bằng code. Không có tài nguyên âm thanh tải ngoài. Trình duyệt cần thao tác người dùng để bật AudioContext; khi WebGL không khả dụng, HUD vẫn cho phép chơi đầy đủ.
 
 Trong dev có `window.__radioDiagnostics()` chỉ đọc để QA đo tọa độ control, state đồng bộ, bộ nhớ renderer và AudioContext; không có API sửa state hoặc tạo vòng lặp mới.
+
+`quiet-room.spec.js` kiểm tra menu dừng đồng hồ, hotkey/focus, Scanner/Làm mát, bốn tab và thông báo theo ngữ cảnh. Các bài radio 3D kiểm tra canvas không bị UI che và so sánh kích thước vùng radio với baseline đã chụp. Xem báo cáo phiên bản để biết kết quả thực tế; không suy ra CI xanh chỉ từ cấu hình.

@@ -3,7 +3,7 @@ import { keyboardAction,dragDelta,pointerCoordinates,accumulateDrag } from '../s
 import { escapeAction } from '../src/overlay-manager.js';
 const event=(key,extra={})=>({key,code:key===' '?'Space':`Key${key.toUpperCase()}`,target:{tagName:'BODY'},...extra});
 test('Escape consumes exactly one overlay/state transition including terminal states',()=>{
- for(const id of ['journal','settings','help'])assert.deepEqual(escapeAction([id],'playing'),{type:'close',id});
+ for(const id of ['journal','settings','help','operations'])assert.deepEqual(escapeAction([id],'playing'),{type:'close',id});
  assert.deepEqual(escapeAction(['settings','help'],'playing'),{type:'close',id:'help'});
  assert.equal(escapeAction([],'playing').type,'pause');assert.equal(escapeAction(['mission'],'paused').type,'resume');
  for(const status of ['won','lost'])assert.equal(escapeAction(['mission'],status).type,'consume');

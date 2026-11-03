@@ -1,5 +1,15 @@
 # Changelog
 
+## V4.0 — The Quiet Radio Room
+
+- Thay dashboard mặc định bằng radio trung tâm, dòng trạng thái mảnh và thanh Thu / Công cụ; mobile giữ Thu / Fine / Menu trong một hàng.
+- Sổ vận hành dùng overlay manager hiện có; giữ toàn bộ nhiệm vụ, scanner, coolant, anten, dò tinh, điểm/combo và đồng hồ phụ. Menu dừng đồng hồ, nhả input, giữ focus; các hành động khẩn cấp đóng menu rồi thực hiện.
+- Một nhãn theo ngữ cảnh, ưu tiên cảnh báo tài nguyên, tiến độ thu và thông báo lưu; tần số/tín hiệu xuất hiện tạm khi dò. Eligibility vẫn dùng `evaluateReception`.
+- Hồ sơ bằng giấy, bốn tab gồm Ghi chú; giữ decoder, Workbench, archive, xuất nhật ký và save schema V3.
+- Camera fit vùng canvas lớn hơn, giảm khoảng đệm từ 13% xuống 8%, không scale model/canvas bằng CSS. Fallback tự đưa bộ điều khiển HTML ra vùng radio.
+- Gộp layout responsive, giữ DOM relocation, ngừng vẽ waveform HTML và band chart khi không mở chúng. Giữ rendering Three.js, audio và simulation V3.2.
+- Regression kiểm tra navigation mới, menu pause/focus, contextual HUD, notes/reload, fallback, touch và WebGL thật; ảnh trước/sau từ ứng dụng chạy trên 5 viewport.
+
 ## 3.2.0 — Stability & Fair Play
 
 - Pin E2E Ubuntu 24.04 cho Playwright 1.56.1, giữ validation độc lập và artifacts khi lỗi; không nâng dependency.

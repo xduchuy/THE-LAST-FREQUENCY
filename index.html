@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23242b20'/%3E%3Cpath d='M5 17h5l3-8 5 16 3-8h6' fill='none' stroke='%23c8a365' stroke-width='2'/%3E%3C/svg%3E" />
-  <title>THE LAST FREQUENCY V3.2 — STABILITY &amp; FAIR PLAY</title>
+  <title>THE LAST FREQUENCY V4.0 — THE QUIET RADIO ROOM</title>
   <style>
     /* =====================================================================
      * V2.1 DESIGN TOKENS — 1974 WEATHERED ANALOG INSTRUMENTATION PALETTE
@@ -573,7 +573,7 @@
         THE LAST FREQUENCY
       </h1>
       <p class="font-mono-tech text-[11px] uppercase tracking-widest text-[#C89049] mb-4">
-        V3.2 // STABILITY &amp; FAIR PLAY — NIGHT SHIFT
+        V4.0 // THE QUIET RADIO ROOM — NIGHT SHIFT
       </p>
 
       <!-- Briefing Note on Yellowed Paper -->
@@ -623,90 +623,38 @@
   </div>
 
 
-  <aside id="mission-panel" aria-label="Bảng nhiệm vụ ca trực">
-    <div class="shift-heading"><span><i></i> LIVE / TRẠM 07</span><button id="btn-pause" aria-label="Tạm dừng ca trực">Ⅱ TẠM DỪNG</button></div>
-    <div class="shift-clock"><div><small>CỬA SỔ LIÊN LẠC</small><strong id="mission-time">12:00</strong></div><div class="shift-score"><small>ĐIỂM CA TRỰC</small><b id="mission-score">00000</b><span id="mission-combo">CHỜ TÍN HIỆU</span></div></div>
-    <div id="storm-status" class="storm-strip">KHÍ QUYỂN ỔN ĐỊNH</div>
-    <div class="shift-resources"><label>ẮC QUY <b id="battery-value">100%</b><meter id="battery-meter" min="0" max="100" value="100"></meter></label><label>NHIỆT ĐÈN <b id="heat-value">12°C</b><meter id="heat-meter" min="0" max="100" value="12"></meter></label></div>
-    <div class="mission-order"><small id="mission-phase">01 / THU THẬP</small><p id="mission-objective">Bắt đầu tại BOREALIS, vùng 3.1–3.3 MHz. Căn anten khoảng 35°.</p></div>
-    <label class="antenna-label" for="antenna">HƯỚNG ANTEN <b id="antenna-value">090°</b></label>
-    <input id="antenna" type="range" min="0" max="180" value="90" aria-label="Hướng anten" />
-    <div class="antenna-scale"><span>000° / BẮC</span><span>090° / ĐÔNG</span><span>180° / NAM</span></div>
-    <div class="record-readout"><span id="capture-status">DÒ SÓNG & CĂN ANTEN</span><b id="capture-value">0%</b></div>
-    <div class="capture-track"><div id="capture-fill"></div></div>
-    <button id="btn-capture" class="capture-button" aria-label="Giữ để thu bản tin">● GIỮ ĐỂ THU BẢN TIN <kbd>SPACE</kbd></button>
-    <div class="shift-actions"><button id="btn-scan">QUÉT SÓNG <kbd>R</kbd><small>−3% PIN</small></button><button id="btn-coolant">LÀM MÁT <kbd>C</kbd><small id="coolant-count">3 BÌNH</small></button></div>
-    <p id="mission-feedback" role="status" aria-live="polite">Thu mỗi trạm: +7% pin. Tắt PWR để sạc & hạ nhiệt.</p>
-    <div class="shift-footer"><span id="mission-difficulty">ĐIỆN BÁO VIÊN</span><span id="save-status">TỰ ĐỘNG LƯU</span></div>
-  </aside>
-  <div id="mission-modal" class="shift-overlay" role="dialog" aria-modal="true" aria-labelledby="mission-modal-title" hidden>
-    <div class="shift-modal-card"><small>CHRONOS / BÁO CÁO CA TRỰC</small><h2 id="mission-modal-title">Ca trực tạm dừng</h2><p id="mission-modal-text"></p><div id="mission-summary"></div><button id="btn-resume">TIẾP TỤC CA TRỰC →</button><button id="btn-new-shift">CA TRỰC MỚI</button></div>
-  </div>
-
-  <!-- The same controls are moved here on phones; desktop positions are restored on resize. -->
-  <main id="mobile-console" aria-label="Bàn máy vô tuyến di động" hidden>
-    <header id="mobile-receiver">
-      <div class="mobile-quick-actions">
-        <button id="btn-mobile-help" aria-label="Mở sổ vận hành">?</button>
-        <button id="btn-mobile-pause" aria-label="Tạm dừng ca trực">II</button>
-      </div>
+  <div id="game-hud">
+    <header id="room-header"><div id="equipment-header"><h2>THE LAST FREQUENCY</h2><span>FIELD STATION / 1974</span></div>
+      <div id="essential-status" aria-label="Trạng thái ca trực"><strong id="mission-time">12:00</strong><span>PIN <b id="battery-value">100%</b></span><span>NHIỆT <b id="heat-value">12°C</b></span><span id="mobile-log-count" aria-label="Số bản tin">0/5</span><button id="btn-pause" aria-label="Tạm dừng ca trực">II</button></div>
     </header>
-    <section id="mobile-workspace" aria-label="Radio KESTREL SW-74 tương tác">
-      <div id="radio-stage"><p id="radio-fallback" hidden></p><span id="radio-gesture-hint">KESTREL SW-74 · CHẠM CÔNG TẮC / KÉO NÚM DÒ</span></div>
-      <details id="mobile-mission-details"><summary><span id="mobile-objective-label">LỆNH CA TRỰC</span><span aria-hidden="true">▴</span></summary><div id="mobile-mission-content"></div></details>
-    </section>
-    <section id="mobile-dock" aria-label="Điều khiển máy thu">
-      <div id="mobile-antenna"></div>
-      <div id="mobile-tuning"></div>
-      <div id="mobile-recording"></div>
-      <div id="mobile-record-buttons"></div>
-    </section>
-    <nav id="mobile-nav" aria-label="Chức năng máy thu">
-      <button id="btn-mobile-receiver"><span aria-hidden="true">◉</span>MÁY THU</button>
-      <button id="btn-mobile-journal"><span aria-hidden="true">▤ <small id="mobile-log-count">0/5</small></span>HỒ SƠ</button>
-      <button id="btn-mobile-workbench"><span aria-hidden="true">∿</span>BẢN ĐỒ</button>
-      <button id="btn-mobile-settings"><span aria-hidden="true">⚙</span>CÀI ĐẶT</button>
-    </nav>
-  </main>
-  <!-- MAIN WEATHERED ANALOG HUD OVERLAY -->
-  <div id="game-hud" class="fixed inset-0 z-20 pointer-events-none flex flex-col justify-between p-2.5 sm:p-4">
-
-    <!-- TOP BAR: Left Riveted Nameplate Unit & Right Analog Signal Instrument Unit -->
-    <div class="flex flex-wrap items-start justify-between gap-2 sm:gap-4 w-full">
-
-      <!-- TOP-LEFT: Riveted Equipment Nameplate & Mechanical Counter -->
-      <div id="equipment-header" class="panel-hardware screw-corners px-3.5 py-2.5 pointer-events-auto flex flex-col gap-1.5 max-w-xs sm:max-w-md">
-        <div class="flex items-center justify-between border-b border-[#555D55]/60 pb-1 gap-2">
-          <span class="font-mono-tech text-[9px] tracking-widest text-[#A18B62] uppercase">
-            PROPERTY OF CHRONOS // SN:74-0911
-          </span>
-          <span class="font-mono-tech text-[9px] px-1.5 py-0.2 bg-[#181916] text-[#8BA88A] border border-[#555D55]">
-            SW-74 / NIGHT SHIFT
-          </span>
-        </div>
-
-        <div class="flex items-center gap-2.5 py-0.5">
-          <!-- Physical Jewel Pilot Lamp -->
-          <span id="status-led" class="pilot-jewel lamp-off w-3.5 h-3.5 shrink-0" title="Đèn báo trạng thái máy thu"></span>
-          <h2 class="font-editorial text-lg sm:text-2xl font-bold tracking-wider text-[#E0D8C1] leading-none engraved-text">
-            THE LAST FREQUENCY
-          </h2>
-          <span id="state-badge" class="ml-auto worn-label text-[10px] tracking-widest">
-            OFF
-          </span>
-        </div>
-
-        <div class="flex items-center justify-between text-[10px] font-mono-tech pt-0.5 gap-2">
-          <span id="hud-clock-label" class="worn-label text-[#D7C8A5]">CA TRỰC 14.11.1974 // 23:42</span>
-          <div class="flex items-center gap-1 bg-[#161815] px-2 py-0.5 border border-[#454a42] shadow-inner">
-            <span class="text-[9px] text-[#72765C]">LOG:</span>
-            <span id="progress-counter" class="text-[#8BA88A] font-bold tracking-wider">0/5 TÍN HIỆU</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- TOP-RIGHT: Vintage Signal Measurement & CRT Monitor Unit -->
-      <div id="receiver-hud" class="panel-hardware screw-corners px-3.5 py-2.5 pointer-events-auto min-w-[265px] sm:min-w-[335px]">
+    <div id="desktop-radio-stage"></div>
+    <footer id="room-footer">
+      <div id="context-readout" role="status" aria-live="polite" aria-atomic="true"></div>
+      <div id="mobile-recording"><div class="record-readout"><span id="capture-status"></span><b id="capture-value">0%</b></div><div class="capture-track"><div id="capture-fill"></div></div></div>
+      <nav id="control-strip" aria-label="Điều khiển ca trực">
+        <button id="btn-journal" class="room-button">HỒ SƠ <span id="journal-badge">0/5</span></button>
+        <button id="btn-capture" class="capture-button" aria-label="Giữ để thu bản tin">● GIỮ ĐỂ THU BẢN TIN <kbd>SPACE</kbd></button>
+        <button id="btn-fine" class="room-button" aria-label="Mở tinh chỉnh tần số">FINE</button>
+        <button id="btn-operations" class="room-button" aria-haspopup="dialog" aria-controls="operations-drawer" aria-expanded="false">CÔNG CỤ</button>
+      </nav>
+    </footer>
+  </div>
+  <main id="mobile-console" aria-label="Bàn máy vô tuyến di động" hidden><header id="mobile-receiver"></header><section id="mobile-workspace" aria-label="Radio KESTREL SW-74 tương tác"><div id="radio-stage"></div></section><footer id="mobile-dock"></footer></main>
+  <aside id="operations-drawer" hidden aria-labelledby="operations-title">
+    <header class="drawer-heading"><div><small>KESTREL SW-74 / FIELD OPERATIONS</small><h2 id="operations-title">Sổ vận hành</h2></div><button id="btn-close-operations" class="room-button">ĐÓNG</button></header>
+    <div class="operations-body">
+      <nav id="mobile-nav" aria-label="Công cụ ca trực"><button id="btn-mobile-journal" class="room-button">HỒ SƠ</button><button id="btn-workbench" class="room-button">BẢN ĐỒ SÓNG</button><button id="btn-sound" class="room-button">CÀI ĐẶT</button><button id="btn-help" class="room-button">HƯỚNG DẪN</button></nav>
+      <aside id="mission-panel" aria-label="Chi tiết ca trực">
+        <div class="shift-actions"><button id="btn-scan">QUÉT SÓNG <kbd>R</kbd><small>−3% PIN</small></button><button id="btn-coolant">LÀM MÁT <kbd>C</kbd><small id="coolant-count">3 BÌNH</small></button></div>
+        <div class="mission-order"><small id="mission-phase">01 / THU THẬP</small><p id="mission-objective"></p></div>
+        <div id="storm-status" class="storm-strip"></div>
+        <p id="mission-feedback" role="status"></p>
+        <div id="operations-controls"></div>
+        <div class="shift-score"><span>ĐIỂM CA TRỰC</span><b id="mission-score">00000</b><span id="mission-combo"></span></div>
+        <div id="station-chips"></div>
+        <div class="shift-footer"><span id="mission-difficulty"></span><span id="save-status"></span></div>
+      </aside>
+      <details id="instrument-details"><summary>ĐỒNG HỒ PHỤ & BẢN TIN ĐANG THU</summary><div id="receiver-hud" class="panel-hardware screw-corners px-3.5 py-2.5 pointer-events-auto min-w-[265px] sm:min-w-[335px]">
         <div class="flex items-center justify-between border-b border-[#555D55]/60 pb-1 mb-2">
           <span class="font-mono-tech text-[9px] uppercase tracking-widest text-[#A18B62]">
             BỘ ĐO SÓNG MANG // AN/GRR-74
@@ -769,12 +717,7 @@
             </div>
           </div>
         </div>
-      </div>
-
-    </div>
-
-    <!-- MIDDLE LIVE TELETYPE / DEMODULATION BANNER -->
-    <div id="hud-middle" class="w-full flex flex-col items-center pointer-events-none my-auto justify-end pb-2">
+      </div><div id="hud-middle" class="w-full flex flex-col items-center pointer-events-none my-auto justify-end pb-2">
       <!-- Active Station Transmission Box -->
       <div id="transmission-banner" class="hidden panel-phosphor screw-corners p-3.5 sm:p-4 max-w-xl w-full pointer-events-auto transition-all duration-300">
         <div class="flex items-center justify-between border-b border-[#72765C]/45 pb-1.5 mb-2">
@@ -813,81 +756,32 @@
       <div id="proximity-toast" class="opacity-0 transition-opacity duration-200 mt-2 px-3 py-1 worn-label text-[11px] text-[#C89049]">
         PHÁT HIỆN SÓNG MANG LÂN CẬN — GIẢM TỐC ĐỘ XOAY ĐỂ KHÓA PHA
       </div>
+    </div></details>
+      <div class="instrument-metadata"><span id="status-led"></span><span id="state-badge"></span><span id="hud-clock-label"></span><span id="progress-counter">0/5 TÍN HIỆU</span><meter id="battery-meter" min="0" max="100" value="100"></meter><meter id="heat-meter" min="0" max="100" value="12"></meter></div>
     </div>
-
-    <!-- BOTTOM BAR: Stamped Preset Tags & Physical Bakelite Control Strip -->
-    <div class="flex flex-col gap-1.5 w-full items-center pointer-events-none">
-
-      <!-- Discovery-First Band Indicators / Unlocked Station Metal Tags -->
-      <div id="station-chips" class="flex flex-wrap justify-center gap-1.5 pointer-events-auto">
-        <!-- Populated dynamically by JS -->
-      </div>
-
-      <!-- Main Bottom Weathered Hardware Control Strip -->
-      <div id="radio-controls" class="w-full flex flex-col gap-2 panel-hardware screw-corners px-3.5 py-2.5 pointer-events-auto">
-        <!-- Analog Slide Rule Fine-Tuning Bar -->
-        <div class="frequency-sweep flex items-center gap-2.5 px-1">
-          <span class="worn-label text-[9px] text-[#A18B62] whitespace-nowrap">LOW 3.0 MHz</span>
-          <input id="hud-freq-slider" type="range" min="300" max="1200" step="1" value="300" class="retro-slider" aria-label="Thanh kéo dò tần số" />
-          <span class="worn-label text-[9px] text-[#A18B62] whitespace-nowrap">HIGH 12.0 MHz</span>
-        </div>
-
-        <div class="radio-control-row flex flex-wrap items-center justify-between gap-2 pt-0.5 border-t border-[#555D55]/45">
-          <!-- Left: Bakelite Power Switch & Mechanical Step Push-Buttons -->
-          <div class="flex items-center gap-1.5 sm:gap-2">
-            <button id="btn-hud-power" aria-label="Bật hoặc tắt nguồn máy thu" aria-pressed="false" class="btn-analog mechanical-switch px-3 py-2 font-mono-tech text-xs font-bold tracking-wider flex items-center gap-2" title="Công tắc nguồn chính (Phím P)">
+  </aside>
+  <div id="aux-controls">
+    <div class="fallback-readout"><span id="fallback-frequency">3.00 MHz</span><span id="fallback-signal">SIGNAL 0%</span></div>
+    <label class="antenna-label" for="antenna">HƯỚNG ANTEN <b id="antenna-value">090°</b></label><input id="antenna" type="range" min="0" max="180" value="90" aria-label="Hướng anten" />
+    <div class="antenna-scale"><span>000° / BẮC</span><span>090° / ĐÔNG</span><span>180° / NAM</span></div>
+    <div id="radio-controls"><label class="frequency-sweep" for="hud-freq-slider">TINH CHỈNH / 3–12 MHz <input id="hud-freq-slider" type="range" min="300" max="1200" step="1" value="300" class="retro-slider" aria-label="Thanh kéo dò tần số" /></label>
+    <div class="radio-control-row"><button id="btn-hud-power" aria-label="Bật hoặc tắt nguồn máy thu" aria-pressed="false" class="btn-analog mechanical-switch px-3 py-2 font-mono-tech text-xs font-bold tracking-wider flex items-center gap-2" title="Công tắc nguồn chính (Phím P)">
               <span id="power-dot" class="pilot-jewel lamp-off w-2.5 h-2.5"></span>
               <span class="desktop-power-label">PWR ON/OFF</span><span class="mobile-power-label">NGUỒN</span>
-            </button>
-
-            <div class="h-6 w-[2px] bg-[#181916] border-r border-[#555D55]/50 mx-0.5 hidden sm:block"></div>
-
-            <!-- Tactile Step Tuning Push-Buttons -->
-            <div class="flex items-center gap-1" role="group" aria-label="Nút bấm cơ khí tinh chỉnh tần số">
-              <button data-step="-0.10" class="btn-step btn-analog px-2.5 py-2 font-mono-tech text-xs" title="Giảm 0.10 MHz">-0.1</button>
-              <button data-step="-0.01" class="btn-step btn-analog px-2.5 py-2 font-mono-tech text-xs font-semibold" title="Giảm 0.01 MHz (Phím Trái)">-0.01</button>
-              <button data-step="0.01" class="btn-step btn-analog px-2.5 py-2 font-mono-tech text-xs font-semibold" title="Tăng 0.01 MHz (Phím Phải)">+0.01</button>
-              <button data-step="0.10" class="btn-step btn-analog px-2.5 py-2 font-mono-tech text-xs" title="Tăng 0.10 MHz">+0.1</button>
-            </div>
-          </div>
-
-          <!-- Center: Stenciled Operating Plate (Hidden on smaller screens) -->
-          <div class="hidden xl:flex items-center gap-2 font-mono-tech text-[10px] text-[#D7C8A5]/70 tracking-wider uppercase">
-            <span class="worn-label">XOAY NÚM 3D / PHÍM ◀ ▶</span>
-            <span>•</span>
-            <span class="worn-label">GIỮ SPACE ĐỂ THU · ESC TẠM DỪNG</span>
-          </div>
-
-          <!-- Right: Engraved Instrument Function Keys -->
-          <div class="desktop-functions flex items-center gap-1.5 sm:gap-2 ml-auto sm:ml-0">
-            <button id="btn-journal" class="btn-analog px-3 py-2 font-mono-tech text-xs font-semibold flex items-center gap-2 relative">
-              <span>HỒ SƠ & KHÓA SỐ</span>
-              <span id="journal-badge" class="worn-label-brass px-1.5 py-0.2 text-[10px]">0/5</span>
-            </button>
-
-            <button id="btn-workbench" class="btn-analog px-2.5 py-2 font-mono-tech text-xs" title="Máy phân tích vết sóng, ghi chú (Phím K)">
-              BẢN ĐỒ SÓNG
-            </button>
-            <button id="btn-sound" class="btn-analog px-2.5 py-2 font-mono-tech text-xs" title="Bảng điều chỉnh Âm thanh & Hiển thị">
-              CẤU HÌNH MÁY
-            </button>
-
-            <button id="btn-help" class="btn-analog px-2.5 py-2 font-mono-tech text-xs" title="Sổ tay vận hành KESTREL SW-74">
-              SỔ VẬN HÀNH
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
+            </button><div class="step-buttons" role="group" aria-label="Tinh chỉnh tần số"><button data-step="-0.10" class="btn-step room-button">−0.1</button><button data-step="-0.01" class="btn-step room-button">−0.01</button><button data-step="0.01" class="btn-step room-button">+0.01</button><button data-step="0.10" class="btn-step room-button">+0.1</button></div></div></div>
   </div>
+  <p id="radio-fallback" hidden>ĐIỀU KHIỂN DỰ PHÒNG · RADIO 3D CHƯA KHẢ DỤNG</p>
+  <div id="mission-modal" class="shift-overlay" role="dialog" aria-modal="true" aria-labelledby="mission-modal-title" hidden>
+    <div class="shift-modal-card"><small>CHRONOS / BÁO CÁO CA TRỰC</small><h2 id="mission-modal-title">Ca trực tạm dừng</h2><p id="mission-modal-text"></p><div id="mission-summary"></div><button id="btn-resume">TIẾP TỤC CA TRỰC →</button><button id="btn-new-shift">CA TRỰC MỚI</button></div>
+  </div>
+
 
   <!-- ===================================================================== -->
   <!-- 1974 INTELLIGENCE DOSSIER & MECHANICAL CIPHER DRAWER                  -->
   <!-- ===================================================================== -->
   <div id="journal-backdrop" class="fixed inset-0 z-40 bg-black/70 hidden opacity-0 transition-opacity duration-250"></div>
 
-  <aside id="journal-drawer" role="dialog" aria-modal="true" aria-labelledby="journal-title" class="fixed z-50 inset-x-0 bottom-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:w-[560px] max-h-[89vh] sm:max-h-none panel-hardware screw-corners flex flex-col drawer-transition translate-y-full sm:translate-y-0 sm:translate-x-full">
+  <aside id="journal-drawer" hidden role="dialog" aria-modal="true" aria-labelledby="journal-title" class="fixed z-50 inset-x-0 bottom-0 sm:inset-y-0 sm:right-0 sm:left-auto w-full sm:w-[560px] max-h-[89vh] sm:max-h-none panel-hardware screw-corners flex flex-col drawer-transition translate-y-full sm:translate-y-0 sm:translate-x-full">
     <!-- Metal Clipboard Header Clamp -->
     <div class="flex items-center justify-between px-5 py-3.5 border-b-2 border-[#181916] bg-[#242823]">
       <div>
@@ -896,7 +790,7 @@
           <span class="font-mono-tech text-[10px] text-[#A18B62]">FILE REF: LOG-11/74</span>
         </div>
         <h3 id="journal-title" class="font-editorial text-2xl font-bold text-[#E0D8C1] mt-0.5 engraved-text">
-          Hồ Sơ Thu Sóng & Hộp Khóa Cơ Khí
+          Hồ sơ trạm 07
         </h3>
       </div>
       <button id="btn-close-journal" class="btn-analog px-3 py-1.5 font-mono-tech text-xs">
@@ -907,14 +801,15 @@
     <!-- Manila Dossier Index Tabs -->
     <div class="flex border-b border-[#555D55] px-5 pt-2.5 gap-2 bg-[#1c1f1b]">
       <button data-tab="tab-clues" class="journal-tab border-t border-x border-[#A18B62] bg-[#363b33] text-[#E0D8C1] py-2 px-3 font-mono-tech text-xs font-bold tracking-wider">
-        <span class="desktop-tab-prefix">FOLDER I: </span>BẢN TIN (<span id="tab-clue-count">0/5</span>)
+        BẢN TIN (<span id="tab-clue-count">0/5</span>)
       </button>
       <button data-tab="tab-decoder" class="journal-tab border-t border-x border-[#454a42] bg-[#242722] text-[#D7C8A5]/60 hover:text-[#E0D8C1] py-2 px-3 font-mono-tech text-xs font-bold tracking-wider">
-        <span class="desktop-tab-prefix">FOLDER II: </span>KHÓA SỐ
+        GIẢI MÃ
       </button>
       <button data-tab="tab-workbench" class="journal-tab border-t border-x border-[#454a42] bg-[#242722] text-[#D7C8A5]/60 hover:text-[#E0D8C1] py-2 px-3 font-mono-tech text-xs font-bold tracking-wider" title="Bản đồ các tần số đã rà và sổ ghi chú">
-        <span class="desktop-tab-prefix">FOLDER III: </span>BẢN ĐỒ
+        BẢN ĐỒ SÓNG
       </button>
+<button data-tab="tab-notes" class="journal-tab">GHI CHÚ</button>
     </div>
 
     <!-- Drawer Body -->
@@ -1085,7 +980,13 @@
             <span id="band-selected-frequency">VỊ TRÍ KIM: 3.00 MHz</span>
           </div>
         </div>
-        <div class="paper-document p-4 space-y-3 font-typewriter">
+        <div class="vintage-instrument p-3 space-y-2">
+          <div class="text-[10px] text-[#A18B62] tracking-widest">BĂNG THU TỰ ĐỘNG // RECENT RECORDS</div>
+          <div id="operator-event-list" class="space-y-1 text-[11px] text-[#D7C8A5] font-mono-tech" aria-live="polite">Chưa có tín hiệu nào được ghi vào nhật ký.</div>
+        </div>
+      </section>
+
+<section id="tab-notes" class="hidden" aria-label="Ghi chú cá nhân">        <div class="paper-document p-4 space-y-3 font-typewriter">
           <div class="flex items-center justify-between gap-2 border-b border-[#795843]/40 pb-2">
             <div>
               <div class="text-[10px] font-bold text-[#795843]">OPERATOR'S FIELD NOTES // FORM CR-74C</div>
@@ -1103,12 +1004,7 @@
             </div>
           </div>
         </div>
-        <div class="vintage-instrument p-3 space-y-2">
-          <div class="text-[10px] text-[#A18B62] tracking-widest">BĂNG THU TỰ ĐỘNG // RECENT RECORDS</div>
-          <div id="operator-event-list" class="space-y-1 text-[11px] text-[#D7C8A5] font-mono-tech" aria-live="polite">Chưa có tín hiệu nào được ghi vào nhật ký.</div>
-        </div>
-      </section>
-
+</section>
     </div>
   </aside>
 

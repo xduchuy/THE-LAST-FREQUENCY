@@ -31,17 +31,22 @@ for (const [width, height] of [[320,568],[360,640],[390,844],[414,896],[667,375]
     await start(page,{width,height});
     await expect(page.locator('#mobile-console')).toBeVisible();
     for (const selector of ['#antenna','#hud-freq-slider']) await controlIsReachable(page,selector);
-    for (const selector of ['#btn-capture','#btn-hud-power','#btn-operations','#btn-pause','.btn-step[data-step="0.01"]']) await controlIsReachable(page,selector,44);
+    for (const selector of ['#btn-capture','#btn-hud-power','#btn-operations','#btn-journal','#btn-workbench','#btn-sound','#btn-pause','.btn-step[data-step="0.01"]']) await controlIsReachable(page,selector,44);
     const boxes=await page.evaluate(()=>['mobile-receiver','mobile-workspace','mobile-dock'].map(id=>{
       const r=document.getElementById(id).getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom};
     }));
     const [receiver,workspace,dock]=boxes;
     expect(receiver.bottom).toBeLessThanOrEqual(workspace.y+1);
     expect(workspace.bottom).toBeLessThanOrEqual(dock.y+1);
+    const nav=await page.locator('#mobile-bottom-nav').boundingBox();
+    expect(nav.y+nav.height).toBeGreaterThanOrEqual(height-16);
+    expect(nav.y+nav.height).toBeLessThanOrEqual(height);
+    await expect(page.locator('#mobile-bottom-nav > button')).toHaveCount(4);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await expect(page.locator('#radio-fallback')).toBeVisible();
-    await useControl(page,'#btn-mobile-journal','tap');await controlIsReachable(page,'#btn-close-journal',44);await page.keyboard.press('Escape');
-    await useControl(page,'#btn-sound','tap');await controlIsReachable(page,'#btn-close-settings',44);await page.keyboard.press('Escape');
+    await page.locator('#btn-journal').tap();await controlIsReachable(page,'#btn-close-journal',44);await page.keyboard.press('Escape');
+    await page.locator('#btn-workbench').tap();await expect(page.locator('#tab-workbench')).toBeVisible();await page.keyboard.press('Escape');
+    await page.locator('#btn-sound').tap();await controlIsReachable(page,'#btn-close-settings',44);await page.keyboard.press('Escape');
     await page.locator('#btn-pause').tap();await expect(page.locator('#mission-modal')).toBeVisible();await page.locator('#btn-resume').tap();
     await page.screenshot({path:test.info().outputPath('console.png')});
     expect(errors).toEqual([]);
@@ -127,4 +132,17 @@ test('real two-finger capture keeps its owner through unrelated up/cancel and ke
   await page.keyboard.up('Space');expect((await diag()).holdingCapture).toBe(false);
   await touch('touchStart',[p]);await page.setViewportSize({width:844,height:390});await expect.poll(async()=>(await diag()).capturePointerId).toBeNull();expect((await diag()).holdingCapture).toBe(false);
   await touch('touchEnd',[]);await cdp.detach();
+});
+
+// The actual button nodes move between desktop and mobile; listeners/state survive.
+test('bottom navigation survives orientation and desktop relocation without duplicate controls',async({page})=>{
+ await start(page);await page.locator('#btn-journal').focus();
+ for(const viewport of [{width:844,height:390},{width:1440,height:900},{width:390,height:844}]){
+  await page.setViewportSize(viewport);await expect(page.locator('#btn-journal')).toBeFocused();
+  for(const id of ['btn-journal','btn-workbench','btn-sound','btn-operations'])await expect(page.locator(`#${id}`)).toHaveCount(1);
+ }
+ await page.locator('#btn-journal').tap();await page.locator('[data-tab="tab-notes"]').tap();await page.locator('#operator-note').fill('Menu cố định / trạm 07');await page.locator('#btn-save-operator-note').tap();await page.locator('#btn-close-journal').tap();
+ await expect(page.locator('#btn-journal')).toBeFocused();await page.locator('#btn-workbench').tap();await expect(page.locator('#tab-workbench')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('#btn-workbench')).toBeFocused();
+ await page.locator('#btn-sound').tap();await expect(page.locator('#settings-modal')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('#btn-sound')).toBeFocused();
+ await page.locator('#btn-journal').tap();await page.locator('[data-tab="tab-notes"]').tap();await expect(page.locator('#operator-note')).toHaveValue('Menu cố định / trạm 07');
 });

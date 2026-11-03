@@ -25,11 +25,11 @@ Mở địa chỉ do Vite hiển thị. `npm run build` tạo bản tĩnh trong 
 
 **P** bật/tắt nguồn · **← / →** dò sóng · **Shift + ← / →** bước 0.01 MHz · **J** hồ sơ · **K** bản đồ sóng · **M** tắt tiếng · **Esc** tạm dừng / tiếp tục.
 
-**Radio là giao diện chính.** Trạng thái mặc định chỉ còn thời gian, pin, nhiệt, số bản tin và thanh Thu / Công cụ. Desktop có nút Hồ sơ; mobile dùng **MENU → HỒ SƠ** và **FINE** để mở ngay bộ dò tinh. Chạm POWER, kéo núm TUNING để dò, kéo VOLUME để chỉnh âm lượng; các điều khiển 3D và HTML dùng cùng state. Nhãn tần số/tín hiệu chỉ hiện trong khi dò và khoảng 2 giây sau thao tác.
+**Radio là giao diện chính.** Trạng thái mặc định chỉ còn thời gian, pin, nhiệt, số bản tin và thanh Thu / Công cụ. Desktop có nút Hồ sơ; mobile có thanh menu cố định dưới cùng với **HỒ SƠ / BẢN ĐỒ SÓNG / CÀI ĐẶT / MENU**, mở trực tiếp bằng một chạm. **THU / FINE** nằm ngay phía trên. Chạm POWER, kéo núm TUNING để dò, kéo VOLUME để chỉnh âm lượng; các điều khiển 3D và HTML dùng cùng state. Nhãn tần số/tín hiệu chỉ hiện trong khi dò và khoảng 2 giây sau thao tác.
 
 **Sổ vận hành** chứa Scanner, Làm mát, anten, thanh dò, nút bước tần số, nhiệm vụ, điểm/combo, các kênh đã khám phá và đồng hồ phụ. Scanner/Làm mát có ngay ở đầu menu; bấm sẽ đóng menu và thực hiện hành động. Mở menu dừng đồng hồ/tài nguyên, nhả thao tác đang giữ và chặn hotkey phía sau. Đóng menu trở lại radio. Các nút HTML vẫn hỗ trợ keyboard; khi WebGL lỗi, chúng tự chuyển ra vùng radio để chơi bằng fallback.
 
-Mobile dành vùng giữa cho radio, giữ Thu/Fine/Menu trong một hàng ở dưới, có safe-area và bố cục ngang riêng. Resize di chuyển đúng các DOM node đang dùng, không clone controls hoặc reset save. Hồ sơ dùng bốn tab **Bản tin / Giải mã / Bản đồ sóng / Ghi chú**; nội dung, xuất nhật ký và lưu ghi chú giữ nguyên.
+Mobile dành vùng giữa cho radio; thanh menu nằm sát đáy, tách khỏi hàng Thu/Fine để dễ chạm, có safe-area và bố cục ngang gọn trong một dải điều khiển. Chữ vẫn rõ trên lớp sơn phai/rỉ sét ở mép và quanh vít; texture tĩnh mô phỏng thiết bị đã dùng lâu năm, không thêm timer hay ảnh hưởng tài nguyên gameplay. Resize di chuyển đúng các DOM node đang dùng, không clone controls hoặc reset save. Hồ sơ dùng bốn tab **Bản tin / Giải mã / Bản đồ sóng / Ghi chú**; nội dung, xuất nhật ký và lưu ghi chú giữ nguyên.
 
 Thiết bị cảm ứng mặc định dùng chất lượng tiết kiệm, DPR giới hạn, ít mưa/bụi và không có bóng động. Chế độ Low giới hạn buffer radio ở 360.000 pixel trên canvas lớn; CSS, camera và tọa độ chạm giữ nguyên. Chuyển chất lượng cũng cập nhật bóng động đúng chế độ. Người chơi có thể chọn chất lượng cao trong Cài đặt. Nếu WebGL không khả dụng, bộ điều khiển dự phòng xuất hiện trong vùng radio và toàn bộ trò chơi vẫn điều khiển được bằng HTML.
 
@@ -86,3 +86,5 @@ Nâng cấp từ tệp `THE_LAST_FREQUENCY_V2.2_SIGNAL_WORKBENCH.html` do chủ 
 Trong dev có `window.__radioDiagnostics()` chỉ đọc để QA đo tọa độ control, state đồng bộ, bộ nhớ renderer và AudioContext; không có API sửa state hoặc tạo vòng lặp mới.
 
 `quiet-room.spec.js` kiểm tra menu dừng đồng hồ, hotkey/focus, Scanner/Làm mát, bốn tab và thông báo theo ngữ cảnh. Các bài radio 3D kiểm tra canvas không bị UI che và so sánh kích thước vùng radio với baseline đã chụp. Xem báo cáo phiên bản để biết kết quả thực tế; không suy ra CI xanh chỉ từ cấu hình.
+
+Bản chỉnh thanh menu mobile và lớp rỉ sét: [ảnh và kiểm thử](docs/mobile-menu/README.md).

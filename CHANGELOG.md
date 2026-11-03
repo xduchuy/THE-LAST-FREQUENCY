@@ -1,5 +1,11 @@
 # Changelog
 
+## V4.0 — Mobile menu & aged metal follow-up
+
+- Khôi phục thanh menu dưới cùng trên mobile: Hồ sơ / Bản đồ sóng / Cài đặt / Menu, mở trực tiếp; Thu và Fine ở phía trên, landscape gộp thành dải ngang.
+- Di chuyển các nút hiện có khi đổi breakpoint, giữ một node/listener và phục hồi focus đúng kể cả khi CSS ẩn parent trước sự kiện media query.
+- Sơn bong, rỉ sét ở cạnh/vít và giấy ố: một SVG texture cục bộ tĩnh, không thêm animation/timer, không sửa luật chơi hoặc save.
+
 ## V4.0 — The Quiet Radio Room
 
 - Thay dashboard mặc định bằng radio trung tâm, dòng trạng thái mảnh và thanh Thu / Công cụ; mobile giữ Thu / Fine / Menu trong một hàng.

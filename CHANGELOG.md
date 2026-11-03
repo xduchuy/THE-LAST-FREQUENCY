@@ -1,5 +1,14 @@
 # Changelog
 
+## V4.1 — Những dấu vết trong đêm
+
+- Máy băng PCM/xung Morse cho trạm đã thu, nghe chậm, seek/rewind và reels phản ứng theo vị trí. Dùng chung AudioContext/limiter, ngắt an toàn khi đóng/blur/hidden/mute.
+- Bảng ghim điều tra: ghim phiếu, khoanh chữ/số, nối/gỡ dữ kiện, lưu cùng ghi chú mà không tự giải CHRONOS.
+- Âm thanh dò sóng phản ánh anten/tuning/storm; phòng trực đồng bộ bão nhiệm vụ, với mưa xiên, đèn bàn và S-Meter rung nhẹ, tôn trọng Reduced Motion/pause.
+- Faceplate oxy hóa/rỉ quanh vít/cạnh và dấu tay ở vùng chạm; texture tạo một lần, giữ mesh/raycast.
+- Ba ca sau CHRONOS có mục tiêu, thời gian, thu thủ công, báo cáo và thành tích riêng; không sửa mission/score/pin ca chính.
+- Save hiện có giữ schema/key và migration, thêm dữ liệu fieldOperations được kiểm tra; regression cho tape, board, ca phụ, reload và phòng trực WebGL.
+
 ## V4.0 — Mobile menu & aged metal follow-up
 
 - Khôi phục thanh menu dưới cùng trên mobile: Hồ sơ / Bản đồ sóng / Cài đặt / Menu, mở trực tiếp; Thu và Fine ở phía trên, landscape gộp thành dải ngang.

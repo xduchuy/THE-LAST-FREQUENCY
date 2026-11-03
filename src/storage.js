@@ -1,3 +1,4 @@
+import {cleanFieldData} from './field-operations.js';
 import { CHANNELS, DIFFICULTIES, createMission, restoreMission } from './mission.js';
 export const STORAGE_KEY = 'the_last_frequency_save_v3';
 export const LEGACY_KEY = 'the_last_frequency_save_v1'; // Verified against the supplied V2.2 HTML.
@@ -27,7 +28,9 @@ export function validateCurrent(data) {
   if (!object(data) || (data.schemaVersion !== undefined && data.schemaVersion !== 31)) return null;
   if (!object(data.mission) || data.mission.version !== 3 || !Object.hasOwn(DIFFICULTIES,data.mission.difficulty)) return null;
   const archive = object(data.archive) ? { ...compatibleFields(data.archive), discoveredIds:stations(data.archive.discoveredIds), source:LEGACY_KEY } : null;
-  return { ...compatibleFields(data), schemaVersion:31, mission:restoreMission(data.mission), archive,
+  const mission=restoreMission(data.mission),fieldOperations=cleanFieldData(data.fieldOperations);
+  if(mission.status!=='won'&&fieldOperations.shift&&['playing','awaiting'].includes(fieldOperations.shift.status))fieldOperations.shift.status='lost';
+  return { ...compatibleFields(data), schemaVersion:31, mission, fieldOperations, archive,
     legacyDecision: ['imported','declined'].includes(data.legacyDecision) ? data.legacyDecision : null };
 }
 export function migrateLegacy(data) {

@@ -4,3 +4,4 @@ import './storage.test.js';
 import './input.test.js';
 import './framing.test.js';
 import './minimal-ui.test.js';
+import './field-operations.test.js';

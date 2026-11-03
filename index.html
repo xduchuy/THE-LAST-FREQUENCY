@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23242b20'/%3E%3Cpath d='M5 17h5l3-8 5 16 3-8h6' fill='none' stroke='%23c8a365' stroke-width='2'/%3E%3C/svg%3E" />
-  <title>THE LAST FREQUENCY V4.0 — THE QUIET RADIO ROOM</title>
+  <title>THE LAST FREQUENCY V4.1 — NHỮNG DẤU VẾT TRONG ĐÊM</title>
   <style>
     /* =====================================================================
      * V2.1 DESIGN TOKENS — 1974 WEATHERED ANALOG INSTRUMENTATION PALETTE
@@ -573,7 +573,7 @@
         THE LAST FREQUENCY
       </h1>
       <p class="font-mono-tech text-[11px] uppercase tracking-widest text-[#C89049] mb-4">
-        V4.0 // THE QUIET RADIO ROOM — NIGHT SHIFT
+        V4.1 // NHỮNG DẤU VẾT TRONG ĐÊM — NIGHT SHIFT
       </p>
 
       <!-- Briefing Note on Yellowed Paper -->
@@ -629,6 +629,7 @@
     </header>
     <div id="desktop-radio-stage"></div>
     <footer id="room-footer">
+      <p id="side-live" hidden role="status"></p>
       <div id="context-readout" role="status" aria-live="polite" aria-atomic="true"></div>
       <div id="mobile-recording"><div class="record-readout"><span id="capture-status"></span><b id="capture-value">0%</b></div><div class="capture-track"><div id="capture-fill"></div></div></div>
       <nav id="control-strip" aria-label="Điều khiển ca trực">
@@ -960,6 +961,21 @@
 
       <!-- TAB 3: V2.2 OPERATOR WORKBENCH, LEARNED BAND TRACE + PERSONAL NOTES -->
       <section id="tab-workbench" class="hidden space-y-4" aria-label="Bàn phân tích tín hiệu">
+        <section class="tape-deck" aria-labelledby="tape-title">
+          <small>MAGNETIC RECORDER / BR-74</small><h4 id="tape-title">Băng lưu tín hiệu</h4>
+          <p>Nghe lại xung Morse của bản tin đã thu; băng tái tạo tín hiệu vô tuyến, không đọc lời thoại.</p>
+          <label for="tape-station">BĂNG ĐÃ LƯU</label><select id="tape-station" aria-label="Chọn băng đã thu"></select>
+          <div id="tape-reels" aria-hidden="true"><i></i><span>▶ ━━━━━ ●</span><i></i></div>
+          <div class="field-buttons"><button id="tape-rewind">LÙI 2S</button><button id="tape-play">PHÁT BĂNG</button><button id="tape-stop">DỪNG</button></div>
+          <label for="tape-position">VỊ TRÍ BĂNG <output id="tape-time">0 / 0 s</output></label><input type="range" id="tape-position" min="0" max="1" step=".05" value="0">
+          <label for="tape-speed">TỐC ĐỘ</label><select id="tape-speed"><option value="1">1× / BÌNH THƯỜNG</option><option value=".75">0.75× / CHẬM</option><option value=".5">0.5× / TÁCH XUNG MORSE</option></select>
+        </section>
+        <section class="side-operations" aria-labelledby="side-title"><small>CHRONOS / AFTER DAWN</small><h4 id="side-title">Ca trực sau bình minh</h4>
+          <label for="side-contract">LỆNH CÔNG TÁC</label><select id="side-contract"></select><p id="side-brief"></p>
+          <p id="side-state" role="status"></p><p id="side-telegram"></p><p id="side-completed"></p><ul id="side-records" aria-label="Hồ sơ từng ca phụ"></ul>
+          <div class="field-buttons"><button id="side-start">NHẬN CA PHỤ</button><button id="side-abort">KẾT THÚC CA</button></div>
+          <label for="side-answer">BÁO CÁO / MÃ ĐIỆN BÁO HOẶC HƯỚNG ANTEN</label><input id="side-answer" maxlength="8" inputmode="numeric"><button id="side-submit">GỬI BÁO CÁO</button><p id="side-feedback" role="status"></p>
+        </section>
         <div class="workbench-panel screw-corners p-4 space-y-3">
           <div class="flex flex-wrap justify-between items-center gap-2 border-b border-[#72765C]/50 pb-2">
             <div>
@@ -987,7 +1003,13 @@
         </div>
       </section>
 
-<section id="tab-notes" class="hidden" aria-label="Ghi chú cá nhân">        <div class="paper-document p-4 space-y-3 font-typewriter">
+<section id="tab-notes" class="hidden" aria-label="Ghi chú cá nhân">
+        <section class="evidence-board" aria-labelledby="board-title"><h4 id="board-title">Bảng ghim điều tra</h4><p id="board-empty"></p>
+          <label for="board-station">PHIẾU ĐÃ THU</label><select id="board-station"></select><button id="board-pin">GHIM PHIẾU</button>
+          <label for="board-mark">KHOANH MỘT TỪ / CON SỐ TRÊN PHIẾU ĐANG CHỌN</label><input id="board-mark" maxlength="120"><button id="board-highlight">KHOANH DỮ KIỆN</button>
+          <div id="board-cards"></div><div class="board-connectors"><label for="board-from">TỪ PHIẾU</label><select id="board-from"></select><label for="board-to">ĐẾN PHIẾU</label><select id="board-to"></select><button id="board-connect">NỐI DỮ KIỆN</button></div><ul id="board-links"></ul>
+        </section>
+        <div class="paper-document p-4 space-y-3 font-typewriter">
           <div class="flex items-center justify-between gap-2 border-b border-[#795843]/40 pb-2">
             <div>
               <div class="text-[10px] font-bold text-[#795843]">OPERATOR'S FIELD NOTES // FORM CR-74C</div>

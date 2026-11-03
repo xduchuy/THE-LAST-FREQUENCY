@@ -207,3 +207,32 @@ kbd { font:9px monospace; opacity:.6; margin-left:4px; }
   #radio-fallback { top:0; }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration:.01ms !important; transition-duration:.01ms !important; } }
+
+/* V4.1 field equipment: tactile controls, paper evidence and a magnetic tape transport. */
+.tape-deck,.side-operations,.evidence-board { margin-bottom:22px; padding:16px; border-top:1px solid #96815c; font:12px/1.7 'IBM Plex Mono',monospace; }
+.tape-deck { color:#d5c9ae; background:#292d24 var(--edge-patina) center/100% 100%; }
+.tape-deck h4,.side-operations h4,.evidence-board h4 { font:23px/1.4 Georgia,serif; margin-bottom:8px; }
+.tape-deck small,.side-operations small { color:#96815c; font-size:10px; letter-spacing:.12em; }
+.side-operations,.evidence-board { color:#3c3225; background:linear-gradient(115deg,#a68d6520,transparent 40%),#c6b89a; }
+.tape-deck label,.side-operations label,.evidence-board label { display:block; font-size:10px; margin-top:12px; }
+.tape-deck select,.side-operations select,.evidence-board select,.side-operations input,.evidence-board input { width:100%; min-height:44px; padding:8px; border:1px solid #96815c; border-radius:0; color:inherit; background:#171b1722; font:12px monospace; }
+.tape-deck select { background:#252920; }
+.tape-deck input[type=range] { width:100%; min-height:36px; accent-color:#96815c; }
+.field-buttons { display:flex; gap:6px; margin:10px 0; }
+.field-buttons button { flex:1; }
+.tape-deck button,.side-operations button,.evidence-board button { min-height:44px; padding:8px; margin-top:6px; border:1px solid #776447; background:#303429 var(--edge-patina) center/100% 100%; color:#d5c9ae; font:11px monospace; touch-action:manipulation; }
+#tape-reels { display:flex; justify-content:space-around; align-items:center; gap:10px; padding:18px 0; margin:12px 0; background:#171d17; }
+#tape-reels i { display:block; width:65px; height:65px; border:3px solid #96815c; border-radius:50%; background:radial-gradient(circle,#20271d 10%,transparent 12%),repeating-conic-gradient(#827554 0deg 30deg,#31372a 32deg 90deg); transform:rotate(var(--tape-turn,0deg)); }
+#tape-reels span { font-size:10px; color:#96815c; }
+#tape-time { float:right; }
+#board-cards { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; padding:20px 0; }
+.evidence-card { position:relative; padding:16px 10px 10px; background:#dfd0ac; border-bottom:1px solid #a58b60; }
+.evidence-card::before { content:''; position:absolute; top:5px; left:50%; width:7px; height:7px; border-radius:50%; background:#79533a; box-shadow:1px 2px 2px #0005; }
+.evidence-card h5 { font-size:11px; font-weight:bold; margin-bottom:10px; }
+.evidence-card p { font:13px/1.8 'Courier New',monospace; overflow-wrap:anywhere; }
+.evidence-card mark { background:none; color:inherit; border:1px solid #8d4e34; border-radius:45%; padding:1px 3px; }
+#board-links li { padding:8px 0; border-top:1px dashed #92694c; overflow-wrap:anywhere; }
+#side-live { pointer-events:none; padding:5px 8px; text-align:center; color:#c6b89a; font:10px/1.4 monospace; background:#292f24; }
+@media (max-width:480px) { #board-cards { grid-template-columns:1fr; } .tape-deck,.side-operations,.evidence-board { padding:12px; } }
+@media (min-width:600px) and (max-height:540px) and (max-width:1023px) { #side-live { grid-column:1 / -1; } }
+@media (prefers-reduced-motion:reduce) { #tape-reels i { transform:none; } }

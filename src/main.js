@@ -1,3 +1,8 @@
+import {createAgedFaceplateTexture} from './hardware-wear.js';
+import {cleanFieldData,sideReception,receptionSound,roomWeather} from './field-operations.js';
+import {setupFieldWorkbench} from './field-workbench.js';
+let fieldData=cleanFieldData(),fieldWorkbench;
+let weather={storm:false,flash:0,lamp:1,rain:1};
 import { MissionClock, STALL_THRESHOLD } from './mission-clock.js';
 import { evaluateReception, receptionText } from './reception.js';
 const missionClock=new MissionClock();
@@ -192,6 +197,7 @@ import './styles.css';
     function storageAccess() { try { return window.localStorage; } catch { return null; } }
     function applySave(saved) {
       mission = restoreMission(saved.mission);
+      fieldData=cleanFieldData(saved.fieldOperations);
       archive = saved.archive || null; legacyDecision = saved.legacyDecision || null;
       for (const key of ['operatorNote','operatorEvents','sensedIds','codeDigits','assistMode','volume','muted','reducedMotion','highQuality']) {
         if (saved[key] !== undefined) state[key] = saved[key];
@@ -217,7 +223,7 @@ import './styles.css';
         return;
       }
       clearTimeout(pendingSaveTimer); pendingSaveTimer=null; lastStorageWrite=now;
-      const payload = { mission, archive, legacyDecision,
+      const payload = { mission, archive, legacyDecision, fieldOperations:fieldData,
         operatorNote:state.operatorNote, operatorEvents:state.operatorEvents, sensedIds:state.sensedIds,
         bandMemory:state.bandMemory.flatMap((v,i)=>v<0?[]:[[i,v]]), codeDigits:state.codeDigits,
         assistMode:state.assistMode, volume:state.volume, muted:state.muted, reducedMotion:state.reducedMotion,
@@ -549,8 +555,9 @@ import './styles.css';
       updateAudioState() {
         if (!this.initialized || !this.ctx) return;
         const now = this.ctx.currentTime;
+        fieldWorkbench?.syncAudio(state.volume,state.muted,overlays?.top()==='journal'&&!document.hidden);
 
-        const targetRain = (state.muted || isAnyOverlayOpen() || mission.status === 'paused' || mission.status === 'lost') ? 0.0001 : Math.max(0.0001, state.volume * 0.045);
+        const targetRain = (state.muted || isAnyOverlayOpen() || mission.status === 'paused' || mission.status === 'lost') ? 0.0001 : Math.max(0.0001, state.volume * (weather.storm ? .064 : .045));
         this.rainGain.gain.setTargetAtTime(targetRain, now, 0.1);
 
         const targetMaster = (state.powerOn && !state.muted && !isAnyOverlayOpen() && mission.status !== 'paused' && mission.status !== 'lost')
@@ -565,28 +572,13 @@ import './styles.css';
           return;
         }
 
-        // Morph noise filter frequency & gain based on tuning position and signal strength
-        const sig = state.signalStrength;
-        const normFreq = (state.frequency - 3.0) / 9.0;
-        const cutoff = 680 + normFreq * 1150 - sig * 480;
-        this.noiseFilter.frequency.setTargetAtTime(cutoff, now, 0.05);
-
-        // Static drops cleanly when locked onto a station (especially clean on 9.65 MHz Chronos)
-        const isFinal = state.activeStation && state.activeStation.id === FINAL_STATION.id;
-        const minStatic = isFinal ? 0.025 : 0.085;
-        const staticLevel = THREE.MathUtils.lerp(0.36, minStatic, sig * 0.9);
-        this.noiseGain.gain.setTargetAtTime(staticLevel, now, 0.05);
-
-        // Heterodyne whistle pitch sweeps as player approaches station center
-        const nearest = getNearestStationInfo(state.frequency);
-        if (nearest.station && nearest.distance < 0.14) {
-          const whistlePitch = 160 + Math.abs(nearest.distance) * 11800;
-          const whistleAmp = Math.sin((1 - nearest.distance / 0.14) * Math.PI) * 0.072 * (1 - sig * 0.72);
-          this.carrierOsc.frequency.setTargetAtTime(whistlePitch, now, 0.03);
-          this.carrierGain.gain.setTargetAtTime(Math.max(0.0001, whistleAmp), now, 0.04);
-        } else {
-          this.carrierGain.gain.setTargetAtTime(0.0001, now, 0.04);
-        }
+        // Antenna quality controls static; heterodyne beat reveals carrier proximity.
+        const sound=receptionSound({...readRadioInput(),signal:state.signalStrength},stormAt(mission));
+        this.noiseFilter.frequency.setTargetAtTime(sound.cutoff,now,.08);
+        this.noiseFilter.Q.setTargetAtTime(1.2+state.signalStrength*1.8,now,.08);
+        this.noiseGain.gain.setTargetAtTime(sound.noise+sound.movement*.025,now,.08);
+        this.carrierOsc.frequency.setTargetAtTime(sound.beat,now,.05);
+        this.carrierGain.gain.setTargetAtTime(Math.max(.0001,sound.whistle),now,.06);
       }
 
       // Soft distant thunder rumble synchronized with lightning flash
@@ -1120,7 +1112,7 @@ import './styles.css';
 
       const motionScale = state.reducedMotion ? 0.25 : 1.0;
       for (const drop of raindrops) {
-        drop.y += drop.speed * motionScale * (1 - dawn * 0.65);
+        drop.y += drop.speed * motionScale * weather.rain * (1 - dawn * 0.65);
         if (drop.y > 512) {
           drop.y = -drop.len;
           drop.x = Math.random() * 512;
@@ -1129,7 +1121,7 @@ import './styles.css';
         rainCtx.lineWidth = 1.5;
         rainCtx.beginPath();
         rainCtx.moveTo(drop.x, drop.y);
-        rainCtx.lineTo(drop.x - 2, drop.y + drop.len);
+        rainCtx.lineTo(drop.x - (weather.storm?8:2), drop.y + drop.len);
         rainCtx.stroke();
       }
       rainTexture.needsUpdate = true;
@@ -1156,13 +1148,14 @@ import './styles.css';
         metalness: 0.12
       });
       const faceplateMat = new THREE.MeshStandardMaterial({
-        color: '#202527',
-        roughness: 0.38,
-        metalness: 0.68
+        map:createAgedFaceplateTexture(),
+        color: '#ffffff',
+        roughness: 0.82,
+        metalness: 0.4
       });
       const brushedMetalMat = new THREE.MeshStandardMaterial({
-        color: '#949b9e',
-        roughness: 0.25,
+        color: '#828578',
+        roughness: 0.48,
         metalness: 0.88
       });
       const darkKnurledMat = new THREE.MeshStandardMaterial({
@@ -1905,6 +1898,7 @@ import './styles.css';
       document.getElementById('slider-volume').value = Math.round(state.volume * 100);
       document.getElementById('lbl-vol').textContent = `${Math.round(state.volume * 100)}%`;
       audio.updateAudioState();
+      fieldWorkbench?.syncAudio(state.volume,state.muted,overlays?.top()==='journal'&&!document.hidden);
       saveProgress();
     }
 
@@ -2138,7 +2132,8 @@ import './styles.css';
 
       if (vuNeedlePivot) {
         const targetAngle = THREE.MathUtils.lerp(0.52, -0.52, state.signalStrength);
-        const accel = (targetAngle - vuNeedleAngle) * 68;
+        const stormTremor=weather.storm&&!state.reducedMotion?Math.sin(nowMs*.018)*.025:0;
+        const accel = (targetAngle + stormTremor - vuNeedleAngle) * 68;
         vuNeedleVelocity = (vuNeedleVelocity + accel * dt) * Math.pow(0.06, dt);
         vuNeedleAngle += vuNeedleVelocity * dt;
         vuNeedlePivot.rotation.z = vuNeedleAngle;
@@ -2421,6 +2416,7 @@ import './styles.css';
       }
       renderArchive();
       overlays.open('journal');
+      fieldWorkbench?.open();
     }
 
     function closeJournalDrawer() { overlays.close('journal'); }
@@ -2718,6 +2714,7 @@ import './styles.css';
       overlays.open('intro');
       holdingCapture = false;
       if (activeTranscriptTimer) clearInterval(activeTranscriptTimer);
+      if(fieldData.shift&&['playing','awaiting'].includes(fieldData.shift.status)){fieldData.shift.status='lost';fieldData.shift.progress=0;}
       mission = createMission(document.getElementById('difficulty').value);
       state.powerOn = false;
       state.radioState = GAME_STATE.OFF;
@@ -2812,8 +2809,11 @@ import './styles.css';
       if (blocked && holdingCapture) releaseCapture();
       updateRadioSimulation(dt,nowMs,Math.min(frameDelta,STALL_THRESHOLD));
       updateMission(nowMs);
+      fieldWorkbench?.update(nowMs,!blocked);
+      weather=roomWeather(mission,state.reducedMotion,blocked);
+      if(lampSpotLight)lampSpotLight.intensity=5.8*weather.lamp;
       renderMissionPanel();
-      if (mission.status === 'playing' && !blocked && nowMs-lastMissionSave > 1000) { saveProgress(); lastMissionSave = nowMs; }
+      if ((mission.status === 'playing'||fieldWorkbench?.isActive()) && !blocked && nowMs-lastMissionSave > 1000) { saveProgress(); lastMissionSave = nowMs; }
       updateOscilloscopes(elapsed);
 
       // Update 1974 Analog Desk Clock hands (starts at 23:42 and advances smoothly)
@@ -2838,13 +2838,14 @@ import './styles.css';
       }
 
       // Occasional distant lightning flash during storm (when not Reduced Motion and before Dawn)
-      if (!state.reducedMotion && state.dawnProgress < 0.3) {
+      if (weather.storm && !state.reducedMotion && state.dawnProgress < 0.3) {
         if (elapsed > nextLightningTime) {
-          lightningFlashIntensity = 1.0;
-          nextLightningTime = elapsed + 16 + Math.random() * 24;
+          lightningFlashIntensity = .35;
+          nextLightningTime = elapsed + 5 + Math.random() * 4;
           audio.playDistantThunder();
         }
       }
+      if(blocked || !weather.storm || state.reducedMotion){lightningFlashIntensity=0;if(moonDirLight)moonDirLight.intensity=state.gameCompleted?1.75:.85;}
       if (lightningFlashIntensity > 0.001) {
         lightningFlashIntensity = Math.max(0, lightningFlashIntensity - dt * 3.2);
         if (moonDirLight && state.dawnProgress < 0.3) {
@@ -2876,7 +2877,7 @@ import './styles.css';
     }
 
     // Persist the final few signal samples when leaving the tab.
-    window.addEventListener('pagehide', () => {updateMission(performance.now(),false);saveProgress(true);});
+    window.addEventListener('pagehide', () => {updateMission(performance.now(),false);fieldWorkbench?.update(performance.now(),false);fieldWorkbench?.deck.pause();saveProgress(true);});
 
     // Boot Application
     window.addEventListener('DOMContentLoaded', () => {
@@ -2994,18 +2995,19 @@ function renderMissionPanel(force=false) {
     writeNodeText(objective,`Mục tiêu: ${next.label}, vùng ${(next.freq-.1).toFixed(1)}–${(next.freq+.1).toFixed(1)} MHz. Anten khoảng ${next.bearing}°. Thu các trạm theo thứ tự bất kỳ.`);
   }
 
+  const sideActive=mission.status==='won'&&fieldData.shift?.status==='playing';
   const reception=evaluateReception(mission,readRadioInput());
   minimalUI.render({mission,reception,storm,holding:holdingCapture,frequency:state.frequency,signal:state.signalStrength,tuning:activeDragType==='tuning'||now-state.lastTuneTimestamp<2000,nearby:getNearestStationInfo(state.frequency).distance<.14});
   const channel=reception.targetStation;
   const duration=reception.captureDuration || 1;
-  const pct=Math.min(100,Math.round(mission.progress/duration*100));
+  const pct=Math.min(100,Math.round(sideActive?fieldData.shift.progress/3*100:mission.progress/duration*100));
   writeText('capture-value',`${pct}%`);
   const fill=document.getElementById('capture-fill');if(fill.style.width!==`${pct}%`)fill.style.width=`${pct}%`;
-  writeText('capture-status',receptionText(reception));
+  writeText('capture-status',sideActive?(sideReception(fieldData.shift,readRadioInput())?'TÍN HIỆU CA PHỤ · GIỮ THU':'CA PHỤ · CĂN TẦN SỐ VÀ ANTEN'):receptionText(reception));
   const btn=document.getElementById('btn-capture');
-  btn.disabled=['terminal','inactive','trip','off','locked','collected','invalid'].includes(reception.reason);
+  btn.disabled=sideActive?!state.powerOn:['terminal','inactive','trip','off','locked','collected','invalid'].includes(reception.reason);
   btn.classList.toggle('receiving',holdingCapture);
-  const captureLabel = channel?.id === 'chronos_final' ? '◉ GIỮ ĐỂ PHÁT SOS <kbd>SPACE</kbd>' : '● GIỮ ĐỂ THU BẢN TIN <kbd>SPACE</kbd>';
+  const captureLabel = sideActive?'● GIỮ ĐỂ THU CA PHỤ <kbd>SPACE</kbd>' : channel?.id === 'chronos_final' ? '◉ GIỮ ĐỂ PHÁT SOS <kbd>SPACE</kbd>' : '● GIỮ ĐỂ THU BẢN TIN <kbd>SPACE</kbd>';
   if (btn.innerHTML !== captureLabel) btn.innerHTML = captureLabel;
   document.getElementById('btn-scan').disabled = mission.status !== 'playing' || mission.scanCooldown>0 || mission.battery<=3 || mission.trip>0;
   const scanButton = document.getElementById('btn-scan');
@@ -3061,8 +3063,8 @@ function coolMachine() {
 }
 const captureButton=document.getElementById('btn-capture');
 captureButton.addEventListener('pointerdown',e=>{
-  if (captureButton.disabled || isAnyOverlayOpen() || mission.status!=='playing' || capturePointerId!==null) return;
-  updateMission();if(mission.status!=='playing')return;
+  if (captureButton.disabled || isAnyOverlayOpen() || !isRecordingSession() || capturePointerId!==null) return;
+  updateMission();if(!isRecordingSession())return;
   e.preventDefault(); capturePointerId=e.pointerId; captureButton.setPointerCapture(e.pointerId); refreshCaptureHold();missionClock.noteInput(mission,readRadioInput());audio.init();
 });
 function refreshCaptureHold(){holdingCapture=keyboardCaptureHeld || capturePointerId!==null;captureButton.classList.toggle('receiving',holdingCapture);}
@@ -3080,7 +3082,7 @@ window.addEventListener('pointerup',releaseCapture);
 window.addEventListener('pointercancel',releaseCapture);
 document.getElementById('btn-scan').addEventListener('click',()=>{overlays.close('operations');runScan();});
 document.getElementById('btn-coolant').addEventListener('click',()=>{overlays.close('operations');coolMachine();});
-document.getElementById('btn-pause').addEventListener('click',pauseMission);
+document.getElementById('btn-pause').addEventListener('click',()=>fieldWorkbench?.isActive()?overlays.open('operations'):pauseMission());
 document.getElementById('btn-resume').addEventListener('click',resumeMission);
 document.getElementById('btn-new-shift').addEventListener('click',resetAllProgress);
 document.getElementById('antenna').addEventListener('input',e=>{ mission.antenna=Number(e.target.value); });
@@ -3108,25 +3110,27 @@ operationsDefinition.hide=function(){
 };
 overlays=createOverlayManager({intro:definition('intro-overlay'),journal:journalDefinition,settings:definition('settings-modal','#btn-close-settings'),
   operations:operationsDefinition,help:definition('help-modal','#btn-close-help'),victory:definition('victory-modal','#btn-continue-freeplay'),mission:definition('mission-modal')},
-  ()=>{ releaseAllInput();updateMission();audio.updateAudioState();renderMissionPanel(true); });
+  ()=>{ releaseAllInput();updateMission();fieldWorkbench?.update(performance.now(),!overlays.top()&&!document.hidden);if(fieldWorkbench?.isActive()){saveProgress(true);if(!overlays.top()&&!document.hidden)audio.init();}audio.updateAudioState();renderMissionPanel(true); });
 document.getElementById('btn-operations').addEventListener('click',()=>overlays.open('operations'));
 document.getElementById('btn-close-operations').addEventListener('click',()=>overlays.close('operations'));
 document.getElementById('btn-fine').addEventListener('click',()=>{overlays.open('operations');document.getElementById('hud-freq-slider').focus();});
 document.getElementById('btn-mobile-journal').addEventListener('click',()=>openJournalDrawer());
 setupInputManager({overlays,
-  escape(){ const action=escapeAction(overlays.stack(),mission.status);
+  escape(){ if(!overlays.top()&&fieldWorkbench?.isActive()){overlays.open('operations');return;}const action=escapeAction(overlays.stack(),mission.status);
     if(action.type==='close') overlays.close(action.id);
     else if(action.type==='pause') pauseMission(); else if(action.type==='resume') resumeMission(); },
   actions:{ power(){audio.init();togglePower();},mute:toggleMute,journal:()=>openJournalDrawer(),workbench:()=>openJournalDrawer('tab-workbench'),scan:runScan,coolant:coolMachine,
-    capture(){updateMission();if(!captureButton.disabled && mission.status==='playing'){keyboardCaptureHeld=true;refreshCaptureHold();missionClock.noteInput(mission,readRadioInput());}},
+    capture(){updateMission();if(!captureButton.disabled && isRecordingSession()){keyboardCaptureHeld=true;refreshCaptureHold();missionClock.noteInput(mission,readRadioInput());}},
     left(e){setTargetFrequency(state.targetFrequency-(e.shiftKey?.01:.03));saveProgress();},
     right(e){setTargetFrequency(state.targetFrequency+(e.shiftKey?.01:.03));saveProgress();} },
   release:releaseAllInput,
   releaseKeyboard(){updateMission();keyboardCaptureHeld=false;refreshCaptureHold();missionClock.noteInput(mission,readRadioInput());},
-  blur(){if(!isAnyOverlayOpen())pauseMission();},
-  visibility(hidden){if(hidden){pauseMission();saveProgress(true);audio.ctx?.suspend().catch(()=>{});}
+  blur(){fieldWorkbench?.deck.pause();if(!isAnyOverlayOpen()){if(fieldWorkbench?.isActive())overlays.open('operations');else pauseMission();}},
+  visibility(hidden){if(hidden){if(fieldWorkbench?.isActive()&&!isAnyOverlayOpen())overlays.open('operations');else pauseMission();fieldWorkbench?.update(performance.now(),false);saveProgress(true);audio.ctx?.suspend().catch(()=>{});}
     else if(state.powerOn && !isAnyOverlayOpen())audio.ctx?.resume().catch(()=>{});}
 });
+function isRecordingSession(){return mission.status==='playing'||(mission.status==='won'&&fieldData.shift?.status==='playing');}
+fieldWorkbench=setupFieldWorkbench({audio,stations:STATIONS,getData:()=>fieldData,getMission:()=>mission,getInput:readRadioInput,save:saveProgress,closeJournal:closeJournalDrawer,release:releaseAllInput});
 function renderArchive() {
   const section=document.getElementById('legacy-archive'); section.hidden=!archive;
   if(!archive)return;
@@ -3162,6 +3166,7 @@ export function getRadioDiagnostics() {
     missionStatus:mission.status,missionElapsed:mission.elapsed,battery:mission.battery,heat:mission.heat,progress:mission.progress,reason:mission.reason,holdingCapture,capturePointerId,keyboardCaptureHeld,activePointerId,drag:activeDragType,reception:evaluateReception(mission,readRadioInput()),telemetryPaints,hudPaints,knobRotation:tuningKnobMesh?.rotation.z,volumeRotation:volumeKnobMesh?.rotation.z,
     powerRotation:powerSwitchPivot?.rotation.x,audioState:audio.ctx?.state,audioTime:audio.ctx?.currentTime,
     audioGain:audio.masterGain?.gain.value,rainGain:audio.rainGain?.gain.value,audioInitialized:audio.initialized,schedulerActive:Boolean(audio.schedulerTimer),renderFrames,
+    fieldOperations:structuredClone(fieldData),tapePlaying:Boolean(fieldWorkbench?.deck.source),tapePosition:fieldWorkbench?.deck.position,tapeRate:fieldWorkbench?.deck.rate,weather:{...weather},lampIntensity:lampSpotLight?.intensity,
     scopeVersion:scopeTexture?.version,textures:renderer?.info.memory.textures,geometries:renderer?.info.memory.geometries,overlay:overlays.top()};
 }
 
